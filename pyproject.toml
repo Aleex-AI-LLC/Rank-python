@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rank-sdk"
+version = "0.1.0"
+description = "The official Python library for the Rank API"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.8"
+authors = [
+    { name = "Aleex AI", email = "info@aleex.ai" },
+]
+classifiers = [
+    "Typing :: Typed",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Security",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "httpx>=0.25.0,<1",
+    "pydantic>=2.0,<3",
+    "typing_extensions>=4.7",
+    "anyio>=3.5.0,<5",
+    "sniffio",
+]
+
+[project.urls]
+Homepage = "https://github.com/Aleex-AI-LLC/rank-python"
+Documentation = "https://docs.aleex-rank.ai"
+Repository = "https://github.com/Aleex-AI-LLC/rank-python"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rank"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/rank"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pyright]
+include = ["src/rank"]
+pythonVersion = "3.8"
