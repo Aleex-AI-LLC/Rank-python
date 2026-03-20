@@ -15,6 +15,7 @@ from ._constants import (
     DEFAULT_TIMEOUT,
 )
 from .resources.auth import AsyncAuth, Auth
+from .resources.pentests import AsyncPentests, Pentests
 
 
 class Rank:
@@ -36,11 +37,11 @@ class Rank:
     _agent_client: SyncAPIClient
 
     auth: Auth
+    pentests: Pentests
     # Future resource namespaces:
     # teams: resources.Teams
     # agents: resources.Agents
     # chats: resources.Chats
-    # pentests: resources.Pentests
     # models: resources.Models
     # mcp_servers: resources.McpServers
     # operations: resources.Operations
@@ -98,6 +99,7 @@ class Rank:
 
     def _init_resources(self) -> None:
         self.auth = Auth(self._api_client)
+        self.pentests = Pentests(self._api_client, self._agent_client)
 
     @property
     def api_client(self) -> SyncAPIClient:
@@ -143,6 +145,7 @@ class AsyncRank:
     _agent_client: AsyncAPIClient
 
     auth: AsyncAuth
+    pentests: AsyncPentests
     # Future resource namespaces (async versions).
 
     def __init__(
@@ -186,6 +189,7 @@ class AsyncRank:
 
     def _init_resources(self) -> None:
         self.auth = AsyncAuth(self._api_client)
+        self.pentests = AsyncPentests(self._api_client, self._agent_client)
 
     @property
     def api_client(self) -> AsyncAPIClient:
