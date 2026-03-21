@@ -1,6 +1,20 @@
 from __future__ import annotations
 
+from .agents import (
+    AgentMcps,
+    AgentTools,
+    Agents,
+    AsyncAgentMcps,
+    AsyncAgentTools,
+    AsyncAgents,
+)
 from .auth import AsyncApiTokens, AsyncAuth, ApiTokens, Auth
+from .chats import (
+    AsyncChats,
+    AsyncOperations,
+    Chats,
+    Operations,
+)
 from .pentests import (
     Assets,
     AsyncAssets,
@@ -31,10 +45,20 @@ from .teams import (
 )
 
 __all__ = [
+    "Agents",
+    "AsyncAgents",
+    "AgentTools",
+    "AsyncAgentTools",
+    "AgentMcps",
+    "AsyncAgentMcps",
     "Auth",
     "AsyncAuth",
     "ApiTokens",
     "AsyncApiTokens",
+    "Chats",
+    "AsyncChats",
+    "Operations",
+    "AsyncOperations",
     "Pentests",
     "AsyncPentests",
     "Assets",

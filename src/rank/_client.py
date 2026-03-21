@@ -14,7 +14,9 @@ from ._constants import (
     DEFAULT_MAX_RETRIES,
     DEFAULT_TIMEOUT,
 )
+from .resources.agents import Agents, AsyncAgents
 from .resources.auth import AsyncAuth, Auth
+from .resources.chats import AsyncChats, Chats
 from .resources.pentests import AsyncPentests, Pentests
 from .resources.teams import AsyncTeams, Teams
 
@@ -40,24 +42,8 @@ class Rank:
     auth: Auth
     pentests: Pentests
     teams: Teams
-    # Future resource namespaces:
-    # agents: resources.Agents
-    # chats: resources.Chats
-    # models: resources.Models
-    # mcp_servers: resources.McpServers
-    # operations: resources.Operations
-    # integrations: resources.Integrations
-    # tickets: resources.Tickets
-    # scheduled_pentests: resources.ScheduledPentests
-    # usage: resources.Usage
-    # billing: resources.Billing
-    # tiers: resources.Tiers
-    # phases: resources.Phases
-    # methodologies: resources.Methodologies
-    # invitations: resources.Invitations
-    # permissions: resources.Permissions
-    # vulnerabilities: resources.Vulnerabilities
-    # ai: resources.AI
+    agents: Agents
+    chats: Chats
 
     def __init__(
         self,
@@ -102,6 +88,8 @@ class Rank:
         self.auth = Auth(self._api_client)
         self.pentests = Pentests(self._api_client, self._agent_client)
         self.teams = Teams(self._api_client)
+        self.agents = Agents(self._api_client)
+        self.chats = Chats(self._api_client)
 
     @property
     def api_client(self) -> SyncAPIClient:
@@ -149,7 +137,8 @@ class AsyncRank:
     auth: AsyncAuth
     pentests: AsyncPentests
     teams: AsyncTeams
-    # Future resource namespaces (async versions).
+    agents: AsyncAgents
+    chats: AsyncChats
 
     def __init__(
         self,
@@ -194,6 +183,8 @@ class AsyncRank:
         self.auth = AsyncAuth(self._api_client)
         self.pentests = AsyncPentests(self._api_client, self._agent_client)
         self.teams = AsyncTeams(self._api_client)
+        self.agents = AsyncAgents(self._api_client)
+        self.chats = AsyncChats(self._api_client)
 
     @property
     def api_client(self) -> AsyncAPIClient:
