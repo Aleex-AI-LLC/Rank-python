@@ -1,5 +1,36 @@
 from __future__ import annotations
 
+from .agent import (
+    Agent,
+    AgentCloneResponse,
+    AgentCreateResponse,
+    AgentDeleteResponse,
+    AgentGroupedResponse,
+    AgentListResponse,
+    AgentMcp,
+    AgentMcpListResponse,
+    AgentTool,
+    AgentToolListResponse,
+    AgentUpdateResponse,
+    AssignMcpsResponse,
+    AssignToolsResponse,
+    AvailableToolListResponse,
+    RemoveMcpResponse,
+    RemoveToolResponse,
+    TeamAgentGroup,
+)
+from .chat import (
+    AssignOperationsResponse,
+    Chat,
+    ChatArchiveResponse,
+    ChatListResponse,
+    ChatMineResponse,
+    ChatOperation,
+    ChatOperationListResponse,
+    ChatSharedResponse,
+    ChatShareResponse,
+    ChatUnshareResponse,
+)
 from .auth import (
     ApiToken,
     ApiTokenCreateResponse,
@@ -134,6 +165,35 @@ from .team import (
 )
 
 __all__ = [
+    # Agent
+    "Agent",
+    "AgentCreateResponse",
+    "AgentUpdateResponse",
+    "AgentCloneResponse",
+    "AgentDeleteResponse",
+    "TeamAgentGroup",
+    "AgentListResponse",
+    "AgentGroupedResponse",
+    "AgentTool",
+    "AgentToolListResponse",
+    "AvailableToolListResponse",
+    "AssignToolsResponse",
+    "RemoveToolResponse",
+    "AgentMcp",
+    "AgentMcpListResponse",
+    "AssignMcpsResponse",
+    "RemoveMcpResponse",
+    # Chat
+    "Chat",
+    "ChatListResponse",
+    "ChatMineResponse",
+    "ChatSharedResponse",
+    "ChatOperation",
+    "ChatOperationListResponse",
+    "AssignOperationsResponse",
+    "ChatShareResponse",
+    "ChatUnshareResponse",
+    "ChatArchiveResponse",
     # Shared
     "RankModel",
     "PaginatedResponse",
