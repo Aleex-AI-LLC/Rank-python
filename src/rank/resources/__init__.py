@@ -15,6 +15,20 @@ from .pentests import (
     Vulnerabilities,
     Webhooks,
 )
+from .teams import (
+    AsyncInvitations,
+    AsyncMembers,
+    AsyncRoles,
+    AsyncTeamAgents,
+    AsyncTeams,
+    AsyncTeamUsage,
+    Invitations,
+    Members,
+    Roles,
+    TeamAgents,
+    Teams,
+    TeamUsage,
+)
 
 __all__ = [
     "Auth",
@@ -33,4 +47,16 @@ __all__ = [
     "AsyncPentestAgents",
     "Vulnerabilities",
     "AsyncVulnerabilities",
+    "Teams",
+    "AsyncTeams",
+    "Members",
+    "AsyncMembers",
+    "Roles",
+    "AsyncRoles",
+    "Invitations",
+    "AsyncInvitations",
+    "TeamAgents",
+    "AsyncTeamAgents",
+    "TeamUsage",
+    "AsyncTeamUsage",
 ]

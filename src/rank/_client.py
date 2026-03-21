@@ -16,6 +16,7 @@ from ._constants import (
 )
 from .resources.auth import AsyncAuth, Auth
 from .resources.pentests import AsyncPentests, Pentests
+from .resources.teams import AsyncTeams, Teams
 
 
 class Rank:
@@ -38,8 +39,8 @@ class Rank:
 
     auth: Auth
     pentests: Pentests
+    teams: Teams
     # Future resource namespaces:
-    # teams: resources.Teams
     # agents: resources.Agents
     # chats: resources.Chats
     # models: resources.Models
@@ -100,6 +101,7 @@ class Rank:
     def _init_resources(self) -> None:
         self.auth = Auth(self._api_client)
         self.pentests = Pentests(self._api_client, self._agent_client)
+        self.teams = Teams(self._api_client)
 
     @property
     def api_client(self) -> SyncAPIClient:
@@ -146,6 +148,7 @@ class AsyncRank:
 
     auth: AsyncAuth
     pentests: AsyncPentests
+    teams: AsyncTeams
     # Future resource namespaces (async versions).
 
     def __init__(
@@ -190,6 +193,7 @@ class AsyncRank:
     def _init_resources(self) -> None:
         self.auth = AsyncAuth(self._api_client)
         self.pentests = AsyncPentests(self._api_client, self._agent_client)
+        self.teams = AsyncTeams(self._api_client)
 
     @property
     def api_client(self) -> AsyncAPIClient:
