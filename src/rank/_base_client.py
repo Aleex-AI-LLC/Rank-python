@@ -256,6 +256,16 @@ class SyncAPIClient(_BaseClient):
             model=model,
         )
 
+    def post_list(
+        self,
+        path: str,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        model: Type[T],
+    ) -> List[T]:
+        response = self._request("POST", path, body=body)
+        return parse_response_list(response=response, model=model)
+
     @overload
     def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: Type[T]) -> T: ...
     @overload
@@ -496,6 +506,16 @@ class AsyncAPIClient(_BaseClient):
             params=params,
             model=model,
         )
+
+    async def post_list(
+        self,
+        path: str,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        model: Type[T],
+    ) -> List[T]:
+        response = await self._request("POST", path, body=body)
+        return parse_response_list(response=response, model=model)
 
     @overload
     async def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: Type[T]) -> T: ...
