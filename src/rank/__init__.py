@@ -37,6 +37,8 @@ from ._exceptions import (
 from ._streaming import AsyncStream, ServerSentEvent, Stream
 from ._utils._transform import NOT_GIVEN
 from .types import (
+    ChatMessage,
+    ChatNameResponse,
     Agent,
     AgentCloneResponse,
     AgentCreateResponse,
@@ -196,6 +198,9 @@ __all__ = [
     # Clients
     "Rank",
     "AsyncRank",
+    # AI types
+    "ChatMessage",
+    "ChatNameResponse",
     # Exceptions
     "RankError",
     "APIError",

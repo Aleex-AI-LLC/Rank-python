@@ -156,11 +156,12 @@ class SyncAPIClient(_BaseClient):
         headers: Optional[Mapping[str, str]] = None,
         files: Optional[Any] = None,
         stream: bool = False,
+        timeout: Optional[float] = None,
     ) -> httpx.Response:
         url = self._build_url(path)
         req_headers = self._build_headers(headers)
 
-        if files:
+        if files and (headers is None or "Accept" not in headers):
             req_headers.pop("Accept", None)
 
         if body is not None:
@@ -169,47 +170,56 @@ class SyncAPIClient(_BaseClient):
         if params is not None:
             params = {k: v for k, v in params.items() if v is not None}
 
-        for attempt in range(self._max_retries + 1):
-            try:
-                request = self._client.build_request(
-                    method,
-                    url,
-                    json=body if not files else None,
-                    data=body if files else None,
-                    params=params,
-                    headers=req_headers,
-                    files=files,
-                )
-                response = self._client.send(request, stream=stream)
+        prev_timeout = None
+        if timeout is not None:
+            prev_timeout = self._client.timeout
+            self._client.timeout = httpx.Timeout(timeout)
 
-            except httpx.TimeoutException as e:
-                if attempt < self._max_retries:
-                    time.sleep(self._retry_delay(attempt))
+        try:
+            for attempt in range(self._max_retries + 1):
+                try:
+                    request = self._client.build_request(
+                        method,
+                        url,
+                        json=body if not files else None,
+                        data=body if files else None,
+                        params=params,
+                        headers=req_headers,
+                        files=files,
+                    )
+                    response = self._client.send(request, stream=stream)
+
+                except httpx.TimeoutException as e:
+                    if attempt < self._max_retries:
+                        time.sleep(self._retry_delay(attempt))
+                        continue
+                    raise APITimeoutError(request=getattr(e, "request", None)) from e
+
+                except httpx.ConnectError as e:
+                    if attempt < self._max_retries:
+                        time.sleep(self._retry_delay(attempt))
+                        continue
+                    raise APIConnectionError(request=getattr(e, "request", None)) from e
+
+                if self._should_retry(response, attempt):
+                    if stream:
+                        response.close()
+                    delay = self._retry_delay(attempt, response)
+                    logger.debug("Retrying request to %s (attempt %d, status %d, delay %.1fs)", url, attempt + 1, response.status_code, delay)
+                    time.sleep(delay)
                     continue
-                raise APITimeoutError(request=getattr(e, "request", None)) from e
 
-            except httpx.ConnectError as e:
-                if attempt < self._max_retries:
-                    time.sleep(self._retry_delay(attempt))
-                    continue
-                raise APIConnectionError(request=getattr(e, "request", None)) from e
+                if response.status_code >= 400:
+                    if stream:
+                        response.read()
+                    self._handle_error_response(response)
 
-            if self._should_retry(response, attempt):
-                if stream:
-                    response.close()
-                delay = self._retry_delay(attempt, response)
-                logger.debug("Retrying request to %s (attempt %d, status %d, delay %.1fs)", url, attempt + 1, response.status_code, delay)
-                time.sleep(delay)
-                continue
+                return response
 
-            if response.status_code >= 400:
-                if stream:
-                    response.read()
-                self._handle_error_response(response)
-
-            return response
-
-        raise APIConnectionError("Max retries exceeded")
+            raise APIConnectionError("Max retries exceeded")
+        finally:
+            if prev_timeout is not None:
+                self._client.timeout = prev_timeout
 
     def get(
         self,
@@ -267,9 +277,9 @@ class SyncAPIClient(_BaseClient):
         return parse_response_list(response=response, model=model)
 
     @overload
-    def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: Type[T]) -> T: ...
+    def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: Type[T], timeout: Optional[float] = ...) -> T: ...
     @overload
-    def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: None = ...) -> Dict[str, Any]: ...
+    def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: None = ..., timeout: Optional[float] = ...) -> Dict[str, Any]: ...
     def post(
         self,
         path: str,
@@ -278,8 +288,9 @@ class SyncAPIClient(_BaseClient):
         params: Optional[Dict[str, Any]] = None,
         files: Optional[Any] = None,
         model: Optional[Type[T]] = None,
+        timeout: Optional[float] = None,
     ) -> Union[T, Dict[str, Any]]:
-        response = self._request("POST", path, body=body, params=params, files=files)
+        response = self._request("POST", path, body=body, params=params, files=files, timeout=timeout)
         if model is not None:
             return parse_response(response=response, model=model)
         return response.json()
@@ -340,6 +351,7 @@ class SyncAPIClient(_BaseClient):
         *,
         body: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
+        files: Optional[Any] = None,
     ) -> Stream:
         """Make a streaming request and return a Stream of SSE events."""
         headers = {"Accept": "text/event-stream"}
@@ -349,6 +361,7 @@ class SyncAPIClient(_BaseClient):
             body=body,
             params=params,
             headers=headers,
+            files=files,
             stream=True,
         )
         return Stream(response)
@@ -405,13 +418,14 @@ class AsyncAPIClient(_BaseClient):
         headers: Optional[Mapping[str, str]] = None,
         files: Optional[Any] = None,
         stream: bool = False,
+        timeout: Optional[float] = None,
     ) -> httpx.Response:
         import anyio
 
         url = self._build_url(path)
         req_headers = self._build_headers(headers)
 
-        if files:
+        if files and (headers is None or "Accept" not in headers):
             req_headers.pop("Accept", None)
 
         if body is not None:
@@ -420,47 +434,56 @@ class AsyncAPIClient(_BaseClient):
         if params is not None:
             params = {k: v for k, v in params.items() if v is not None}
 
-        for attempt in range(self._max_retries + 1):
-            try:
-                request = self._client.build_request(
-                    method,
-                    url,
-                    json=body if not files else None,
-                    data=body if files else None,
-                    params=params,
-                    headers=req_headers,
-                    files=files,
-                )
-                response = await self._client.send(request, stream=stream)
+        prev_timeout = None
+        if timeout is not None:
+            prev_timeout = self._client.timeout
+            self._client.timeout = httpx.Timeout(timeout)
 
-            except httpx.TimeoutException as e:
-                if attempt < self._max_retries:
-                    await anyio.sleep(self._retry_delay(attempt))
+        try:
+            for attempt in range(self._max_retries + 1):
+                try:
+                    request = self._client.build_request(
+                        method,
+                        url,
+                        json=body if not files else None,
+                        data=body if files else None,
+                        params=params,
+                        headers=req_headers,
+                        files=files,
+                    )
+                    response = await self._client.send(request, stream=stream)
+
+                except httpx.TimeoutException as e:
+                    if attempt < self._max_retries:
+                        await anyio.sleep(self._retry_delay(attempt))
+                        continue
+                    raise APITimeoutError(request=getattr(e, "request", None)) from e
+
+                except httpx.ConnectError as e:
+                    if attempt < self._max_retries:
+                        await anyio.sleep(self._retry_delay(attempt))
+                        continue
+                    raise APIConnectionError(request=getattr(e, "request", None)) from e
+
+                if self._should_retry(response, attempt):
+                    if stream:
+                        await response.aclose()
+                    delay = self._retry_delay(attempt, response)
+                    logger.debug("Retrying request to %s (attempt %d, status %d, delay %.1fs)", url, attempt + 1, response.status_code, delay)
+                    await anyio.sleep(delay)
                     continue
-                raise APITimeoutError(request=getattr(e, "request", None)) from e
 
-            except httpx.ConnectError as e:
-                if attempt < self._max_retries:
-                    await anyio.sleep(self._retry_delay(attempt))
-                    continue
-                raise APIConnectionError(request=getattr(e, "request", None)) from e
+                if response.status_code >= 400:
+                    if stream:
+                        await response.aread()
+                    self._handle_error_response(response)
 
-            if self._should_retry(response, attempt):
-                if stream:
-                    await response.aclose()
-                delay = self._retry_delay(attempt, response)
-                logger.debug("Retrying request to %s (attempt %d, status %d, delay %.1fs)", url, attempt + 1, response.status_code, delay)
-                await anyio.sleep(delay)
-                continue
+                return response
 
-            if response.status_code >= 400:
-                if stream:
-                    await response.aread()
-                self._handle_error_response(response)
-
-            return response
-
-        raise APIConnectionError("Max retries exceeded")
+            raise APIConnectionError("Max retries exceeded")
+        finally:
+            if prev_timeout is not None:
+                self._client.timeout = prev_timeout
 
     async def get(
         self,
@@ -518,9 +541,9 @@ class AsyncAPIClient(_BaseClient):
         return parse_response_list(response=response, model=model)
 
     @overload
-    async def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: Type[T]) -> T: ...
+    async def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: Type[T], timeout: Optional[float] = ...) -> T: ...
     @overload
-    async def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: None = ...) -> Dict[str, Any]: ...
+    async def post(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., files: Optional[Any] = ..., model: None = ..., timeout: Optional[float] = ...) -> Dict[str, Any]: ...
     async def post(
         self,
         path: str,
@@ -529,8 +552,9 @@ class AsyncAPIClient(_BaseClient):
         params: Optional[Dict[str, Any]] = None,
         files: Optional[Any] = None,
         model: Optional[Type[T]] = None,
+        timeout: Optional[float] = None,
     ) -> Union[T, Dict[str, Any]]:
-        response = await self._request("POST", path, body=body, params=params, files=files)
+        response = await self._request("POST", path, body=body, params=params, files=files, timeout=timeout)
         if model is not None:
             return parse_response(response=response, model=model)
         return response.json()
@@ -591,6 +615,7 @@ class AsyncAPIClient(_BaseClient):
         *,
         body: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
+        files: Optional[Any] = None,
     ) -> AsyncStream:
         """Make a streaming request and return an AsyncStream of SSE events."""
         headers = {"Accept": "text/event-stream"}
@@ -600,6 +625,7 @@ class AsyncAPIClient(_BaseClient):
             body=body,
             params=params,
             headers=headers,
+            files=files,
             stream=True,
         )
         return AsyncStream(response)

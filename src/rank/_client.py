@@ -15,6 +15,7 @@ from ._constants import (
     DEFAULT_TIMEOUT,
 )
 from .resources.agents import Agents, AsyncAgents
+from .resources.ai import AI, AsyncAI
 from .resources.auth import AsyncAuth, Auth
 from .resources.chats import AsyncChats, Chats
 from .resources.pentests import AsyncPentests, Pentests
@@ -39,6 +40,7 @@ class Rank:
     _api_client: SyncAPIClient
     _agent_client: SyncAPIClient
 
+    ai: AI
     auth: Auth
     pentests: Pentests
     teams: Teams
@@ -85,6 +87,7 @@ class Rank:
         self._init_resources()
 
     def _init_resources(self) -> None:
+        self.ai = AI(self._agent_client)
         self.auth = Auth(self._api_client)
         self.pentests = Pentests(self._api_client, self._agent_client)
         self.teams = Teams(self._api_client)
@@ -134,6 +137,7 @@ class AsyncRank:
     _api_client: AsyncAPIClient
     _agent_client: AsyncAPIClient
 
+    ai: AsyncAI
     auth: AsyncAuth
     pentests: AsyncPentests
     teams: AsyncTeams
@@ -180,6 +184,7 @@ class AsyncRank:
         self._init_resources()
 
     def _init_resources(self) -> None:
+        self.ai = AsyncAI(self._agent_client)
         self.auth = AsyncAuth(self._api_client)
         self.pentests = AsyncPentests(self._api_client, self._agent_client)
         self.teams = AsyncTeams(self._api_client)
