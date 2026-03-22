@@ -8,6 +8,9 @@ from .agents import (
     AsyncAgentTools,
     AsyncAgents,
 )
+from .ai import AI, AsyncAI
+from .ai import AsyncChat as AsyncAIChat
+from .ai import Chat as AIChat
 from .auth import AsyncApiTokens, AsyncAuth, ApiTokens, Auth
 from .chats import (
     AsyncChats,
@@ -45,6 +48,10 @@ from .teams import (
 )
 
 __all__ = [
+    "AI",
+    "AsyncAI",
+    "AIChat",
+    "AsyncAIChat",
     "Agents",
     "AsyncAgents",
     "AgentTools",

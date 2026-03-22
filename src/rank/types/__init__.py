@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from .ai import (
+    ChatMessage,
+    ChatNameResponse,
+)
 from .agent import (
     Agent,
     AgentCloneResponse,
@@ -165,6 +169,9 @@ from .team import (
 )
 
 __all__ = [
+    # AI
+    "ChatMessage",
+    "ChatNameResponse",
     # Agent
     "Agent",
     "AgentCreateResponse",
