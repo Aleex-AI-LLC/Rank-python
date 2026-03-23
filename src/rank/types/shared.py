@@ -39,13 +39,17 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 
 class Permission(RankModel):
-    """API permission object used across auth, teams, and roles."""
+    """API permission object used across auth, teams, and roles.
+
+    The PHP ``Permission::toArray()`` returns ``id``, ``name``, ``method``,
+    ``tag``, and ``protected``.  It does **not** return ``description``.
+    """
 
     id: int
     name: str = ""
     method: str = ""
     tag: str = ""
-    description: Optional[str] = None
+    protected: Optional[bool] = None
 
 
 class PaginationInfo(RankModel):
@@ -81,3 +85,10 @@ class ErrorDetail(BaseModel):
     field: Optional[str] = None
     message: str = ""
     code: Optional[str] = None
+
+
+class PermissionListResponse(RankModel):
+    """Response from ``GET /permissions``."""
+
+    items: List[Permission] = []
+    pagination: Optional[PaginationInfo] = None

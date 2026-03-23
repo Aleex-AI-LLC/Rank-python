@@ -99,6 +99,7 @@ class User(RankModel):
     region: Optional[str] = None
     language: str = "en"
     verified: bool = False
+    is_banned: bool = False
     tier: Optional[Tier] = None
     trial: Optional[Trial] = None
     subscription: Optional[Subscription] = None
@@ -270,6 +271,61 @@ class UpdateUsernameResponse(RankModel):
     user: Optional[Dict[str, Any]] = None
 
 
+class TierCharacteristic(RankModel):
+    """A single tier characteristic (label + value pair)."""
+
+    label: str = ""
+    value: Optional[str] = None
+
+
+class TierDetail(RankModel):
+    """Full tier object returned by ``GET /tiers``.
+
+    Unlike :class:`Tier` (the simplified version nested in user profiles),
+    this contains all commercial fields including display prices and
+    characteristics.
+
+    Note: ``*_display`` fields can be a number **or** the string
+    ``"Custom"`` for enterprise tiers, hence ``Optional[Any]``.
+    """
+
+    id: int
+    name: str = ""
+    description: Optional[str] = None
+    is_default: Optional[bool] = None
+    max_pentests_per_month: Optional[int] = None
+    max_team_members: Optional[int] = None
+    max_teams: Optional[int] = None
+    max_api_tokens: Optional[int] = None
+    max_agents: Optional[int] = None
+    max_scheduled_pentests: Optional[int] = None
+    price_monthly: Optional[float] = None
+    price_yearly: Optional[float] = None
+    price_monthly_display: Optional[Any] = None
+    price_yearly_display: Optional[Any] = None
+    monthly_usage_budget_usd: Optional[float] = None
+    monthly_usage_budget_display: Optional[Any] = None
+    team_member_usage_budget_usd: Optional[float] = None
+    team_member_usage_budget_display: Optional[Any] = None
+    is_custom_pricing: bool = False
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    characteristics: Optional[Dict[str, TierCharacteristic]] = None
+
+
+class TierListResponse(RankModel):
+    """Response from ``GET /tiers``.
+
+    Tiers are grouped by domain:
+
+    - ``individual``: user-level tiers (Casual, Pro, Ultra).
+    - ``team``: team-level tiers (Business, Enterprise).
+    """
+
+    individual: List[TierDetail] = []
+    team: List[TierDetail] = []
+
+
 # Re-export MessageResponse so callers can import from types.auth directly.
 __all__ = [
     "ApiToken",
@@ -286,6 +342,9 @@ __all__ = [
     "SessionUserData",
     "Subscription",
     "Tier",
+    "TierCharacteristic",
+    "TierDetail",
+    "TierListResponse",
     "Trial",
     "UpdateEmailResponse",
     "UpdateUsernameResponse",

@@ -14,7 +14,9 @@ from ...types.agent import (
     AgentUpdateResponse,
 )
 from .._base import AsyncAPIResource, SyncAPIResource
-from .mcps import AgentMcps, AsyncAgentMcps
+from .mcp_servers import AsyncMcpServers, McpServers
+from .agent_mcps import AgentMcps, AsyncAgentMcps
+from .models import AIModels, AsyncAIModels
 from .tools import AgentTools, AsyncAgentTools
 
 _AGENTS = "/agents"
@@ -55,11 +57,15 @@ class Agents(SyncAPIResource):
 
     tools: AgentTools
     mcps: AgentMcps
+    models: AIModels
+    mcp_servers: McpServers
 
     def __init__(self, client: SyncAPIClient) -> None:
         super().__init__(client)
         self.tools = AgentTools(client)
         self.mcps = AgentMcps(client)
+        self.models = AIModels(client)
+        self.mcp_servers = McpServers(client)
 
     # -- CRUD ---------------------------------------------------------------
 
@@ -229,11 +235,15 @@ class AsyncAgents(AsyncAPIResource):
 
     tools: AsyncAgentTools
     mcps: AsyncAgentMcps
+    models: AsyncAIModels
+    mcp_servers: AsyncMcpServers
 
     def __init__(self, client: AsyncAPIClient) -> None:
         super().__init__(client)
         self.tools = AsyncAgentTools(client)
         self.mcps = AsyncAgentMcps(client)
+        self.models = AsyncAIModels(client)
+        self.mcp_servers = AsyncMcpServers(client)
 
     # -- CRUD ---------------------------------------------------------------
 

@@ -15,6 +15,7 @@ from ...types.chat import (
 )
 from ...types.shared import MessageResponse
 from .._base import AsyncAPIResource, SyncAPIResource
+from .operation_logs import AsyncOperationLogs, OperationLogs
 from .operations import AsyncOperations, Operations
 
 _CHATS = "/chats"
@@ -49,10 +50,12 @@ class Chats(SyncAPIResource):
     """
 
     operations: Operations
+    operation_logs: OperationLogs
 
     def __init__(self, client: SyncAPIClient) -> None:
         super().__init__(client)
         self.operations = Operations(client)
+        self.operation_logs = OperationLogs(client)
 
     # -- CRUD ---------------------------------------------------------------
 
@@ -234,10 +237,12 @@ class AsyncChats(AsyncAPIResource):
     """Async variant of :class:`Chats`."""
 
     operations: AsyncOperations
+    operation_logs: AsyncOperationLogs
 
     def __init__(self, client: AsyncAPIClient) -> None:
         super().__init__(client)
         self.operations = AsyncOperations(client)
+        self.operation_logs = AsyncOperationLogs(client)
 
     # -- CRUD ---------------------------------------------------------------
 
