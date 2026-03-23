@@ -128,10 +128,26 @@ class Tickets(SyncAPIResource):
             comment_id: Jira comment ID (string).
             comment: New comment body text.
         """
-        return self._client.put(
+        return self._client.patch(
             f"{_TICKETS}/{ticket_id}/comments/{comment_id}",
             body={"comment": comment},
             model=JiraComment,
+        )
+
+    def delete_comment(
+        self,
+        ticket_id: int,
+        comment_id: str,
+    ) -> MessageResponse:
+        """Delete a comment from a ticket.
+
+        Args:
+            ticket_id: ID of the ticket.
+            comment_id: Jira comment ID (string).
+        """
+        return self._client.delete(
+            f"{_TICKETS}/{ticket_id}/comments/{comment_id}",
+            model=MessageResponse,
         )
 
     def add_attachment(
@@ -233,10 +249,26 @@ class AsyncTickets(AsyncAPIResource):
         *,
         comment: str,
     ) -> JiraComment:
-        return await self._client.put(
+        return await self._client.patch(
             f"{_TICKETS}/{ticket_id}/comments/{comment_id}",
             body={"comment": comment},
             model=JiraComment,
+        )
+
+    async def delete_comment(
+        self,
+        ticket_id: int,
+        comment_id: str,
+    ) -> MessageResponse:
+        """Delete a comment from a ticket.
+
+        Args:
+            ticket_id: ID of the ticket.
+            comment_id: Jira comment ID (string).
+        """
+        return await self._client.delete(
+            f"{_TICKETS}/{ticket_id}/comments/{comment_id}",
+            model=MessageResponse,
         )
 
     async def add_attachment(
