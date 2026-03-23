@@ -23,18 +23,6 @@ from .agent import (
     RemoveToolResponse,
     TeamAgentGroup,
 )
-from .chat import (
-    AssignOperationsResponse,
-    Chat,
-    ChatArchiveResponse,
-    ChatListResponse,
-    ChatMineResponse,
-    ChatOperation,
-    ChatOperationListResponse,
-    ChatSharedResponse,
-    ChatShareResponse,
-    ChatUnshareResponse,
-)
 from .auth import (
     ApiToken,
     ApiTokenCreateResponse,
@@ -49,12 +37,52 @@ from .auth import (
     SessionUserData,
     Subscription,
     Tier,
+    TierCharacteristic,
+    TierDetail,
+    TierListResponse,
     Trial,
     UpdateEmailResponse,
     UpdateUsernameResponse,
     User,
     UserTeam,
     UserTeamRole,
+)
+from .billing import (
+    BillingInvoice,
+    BillingInvoicesResponse,
+    BillingStatusResponse,
+    BillingSubscription,
+    BillingTrialStatusResponse,
+)
+from .chat import (
+    AssignOperationsResponse,
+    Chat,
+    ChatArchiveResponse,
+    ChatListResponse,
+    ChatMineResponse,
+    ChatOperation,
+    ChatOperationListResponse,
+    ChatSharedResponse,
+    ChatShareResponse,
+    ChatUnshareResponse,
+)
+from .mcp_server import (
+    McpServer,
+    McpServerCreateResponse,
+    McpServerDeleteResponse,
+    McpServerListResponse,
+)
+from .model import (
+    AIModel,
+    ModelAssignResponse,
+    ModelListResponse,
+)
+from .operation import (
+    OperationAgentInfo,
+    OperationLog,
+    OperationLogListResponse,
+    OperationModelInfo,
+    OperationPentestInfo,
 )
 from .pentest import (
     AgentAssignment,
@@ -73,6 +101,9 @@ from .pentest import (
     EvidencesResponse,
     FinishVulnSummary,
     GenerateReportResponse,
+    GlobalVulnerabilitySummaryResponse,
+    Methodology,
+    MethodologyListResponse,
     OperationEvidence,
     OperationEvidenceVuln,
     Pentest,
@@ -87,6 +118,8 @@ from .pentest import (
     PentestListResponse,
     PentestTeam,
     Pentester,
+    Phase,
+    PhaseListResponse,
     ProcessVulnerabilitiesResponse,
     ProcessedVulnerability,
     QualityGateFailure,
@@ -121,6 +154,12 @@ from .pentest import (
     WebhookDeleteResponse,
     WebhookListResponse,
 )
+from .scheduled_pentest import (
+    ScheduledPentest,
+    ScheduledPentestCancelResponse,
+    ScheduledPentestInfo,
+    ScheduledPentestListResponse,
+)
 from .shared import (
     ErrorDetail,
     MessageResponse,
@@ -128,11 +167,14 @@ from .shared import (
     PaginationInfo,
     PaginationMeta,
     Permission,
+    PermissionListResponse,
     RankModel,
     SuccessResponse,
 )
 from .team import (
+    InvitationAcceptResponse,
     InvitationCreateResponse,
+    InvitationDetail,
     InvitationListPagination,
     InvitationListResponse,
     InvitationStats,
@@ -166,6 +208,18 @@ from .team import (
     UsageTeamInfo,
     UsageTeamTier,
     UsageTotals,
+    UserInvitation,
+    UserInvitationListResponse,
+)
+from .ticket import (
+    JiraAttachment,
+    JiraComment,
+    Ticket,
+    TicketAddAttachmentResponse,
+    TicketAttachment,
+    TicketComment,
+    TicketCreateResponse,
+    TicketListResponse,
 )
 
 __all__ = [
@@ -190,6 +244,15 @@ __all__ = [
     "AgentMcpListResponse",
     "AssignMcpsResponse",
     "RemoveMcpResponse",
+    # AI Models
+    "AIModel",
+    "ModelListResponse",
+    "ModelAssignResponse",
+    # MCP Servers
+    "McpServer",
+    "McpServerListResponse",
+    "McpServerCreateResponse",
+    "McpServerDeleteResponse",
     # Chat
     "Chat",
     "ChatListResponse",
@@ -201,18 +264,28 @@ __all__ = [
     "ChatShareResponse",
     "ChatUnshareResponse",
     "ChatArchiveResponse",
+    # Operation logs
+    "OperationModelInfo",
+    "OperationAgentInfo",
+    "OperationPentestInfo",
+    "OperationLog",
+    "OperationLogListResponse",
     # Shared
     "RankModel",
     "PaginatedResponse",
     "PaginationMeta",
     "PaginationInfo",
     "Permission",
+    "PermissionListResponse",
     "MessageResponse",
     "SuccessResponse",
     "ErrorDetail",
     # Auth
     "User",
     "Tier",
+    "TierCharacteristic",
+    "TierDetail",
+    "TierListResponse",
     "Trial",
     "Subscription",
     "UserTeam",
@@ -230,6 +303,12 @@ __all__ = [
     "ProfileUpdateResponse",
     "UpdateEmailResponse",
     "UpdateUsernameResponse",
+    # Billing
+    "BillingTrialStatusResponse",
+    "BillingSubscription",
+    "BillingStatusResponse",
+    "BillingInvoice",
+    "BillingInvoicesResponse",
     # Pentest core
     "Pentester",
     "PentestTeam",
@@ -274,6 +353,19 @@ __all__ = [
     "EvidenceFileListResponse",
     "EvidenceFileUploadResponse",
     "EvidenceFileDeleteResponse",
+    # Phases
+    "Phase",
+    "PhaseListResponse",
+    # Methodologies
+    "Methodology",
+    "MethodologyListResponse",
+    # Scheduled pentests
+    "ScheduledPentestInfo",
+    "ScheduledPentest",
+    "ScheduledPentestListResponse",
+    "ScheduledPentestCancelResponse",
+    # Global vulnerability summary
+    "GlobalVulnerabilitySummaryResponse",
     # Vulnerability
     "Vulnerability",
     "VulnerabilityListItem",
@@ -323,6 +415,11 @@ __all__ = [
     "InvitationListPagination",
     "InvitationListResponse",
     "InvitationCreateResponse",
+    # User invitations
+    "UserInvitation",
+    "UserInvitationListResponse",
+    "InvitationDetail",
+    "InvitationAcceptResponse",
     # Team agents
     "TeamAgentItem",
     "TeamAgentDetail",
@@ -348,4 +445,13 @@ __all__ = [
     "UsageHistoryItem",
     "UsageHistoryResponse",
     "OnDemandToggleResponse",
+    # Tickets
+    "JiraAttachment",
+    "JiraComment",
+    "Ticket",
+    "TicketAddAttachmentResponse",
+    "TicketComment",
+    "TicketAttachment",
+    "TicketListResponse",
+    "TicketCreateResponse",
 ]

@@ -1,37 +1,52 @@
 from __future__ import annotations
 
 from .agents import (
+    AIModels,
     AgentMcps,
     AgentTools,
     Agents,
+    AsyncAIModels,
     AsyncAgentMcps,
     AsyncAgentTools,
     AsyncAgents,
+    AsyncMcpServers,
+    McpServers,
 )
 from .ai import AI, AsyncAI
 from .ai import AsyncChat as AsyncAIChat
 from .ai import Chat as AIChat
 from .auth import AsyncApiTokens, AsyncAuth, ApiTokens, Auth
+from .billing import AsyncBilling, Billing
 from .chats import (
     AsyncChats,
+    AsyncOperationLogs,
     AsyncOperations,
     Chats,
+    OperationLogs,
     Operations,
 )
+from .invitations import AsyncUserInvitations, UserInvitations
 from .pentests import (
     Assets,
     AsyncAssets,
     AsyncComments,
+    AsyncMethodologies,
     AsyncPentestAgents,
     AsyncPentests,
+    AsyncPhases,
+    AsyncScheduledPentests,
     AsyncVulnerabilities,
     AsyncWebhooks,
     Comments,
+    Methodologies,
     PentestAgents,
     Pentests,
+    Phases,
+    ScheduledPentests,
     Vulnerabilities,
     Webhooks,
 )
+from .permissions import AsyncPermissions, Permissions
 from .teams import (
     AsyncInvitations,
     AsyncMembers,
@@ -46,6 +61,9 @@ from .teams import (
     Teams,
     TeamUsage,
 )
+from .tickets import AsyncTickets, Tickets
+from .tiers import AsyncTiers, Tiers
+from .usage import AsyncUsage, Usage
 
 __all__ = [
     "AI",
@@ -58,14 +76,24 @@ __all__ = [
     "AsyncAgentTools",
     "AgentMcps",
     "AsyncAgentMcps",
+    "AIModels",
+    "AsyncAIModels",
+    "McpServers",
+    "AsyncMcpServers",
     "Auth",
     "AsyncAuth",
     "ApiTokens",
     "AsyncApiTokens",
+    "Billing",
+    "AsyncBilling",
     "Chats",
     "AsyncChats",
     "Operations",
     "AsyncOperations",
+    "OperationLogs",
+    "AsyncOperationLogs",
+    "UserInvitations",
+    "AsyncUserInvitations",
     "Pentests",
     "AsyncPentests",
     "Assets",
@@ -78,6 +106,14 @@ __all__ = [
     "AsyncPentestAgents",
     "Vulnerabilities",
     "AsyncVulnerabilities",
+    "Phases",
+    "AsyncPhases",
+    "Methodologies",
+    "AsyncMethodologies",
+    "ScheduledPentests",
+    "AsyncScheduledPentests",
+    "Permissions",
+    "AsyncPermissions",
     "Teams",
     "AsyncTeams",
     "Members",
@@ -90,4 +126,10 @@ __all__ = [
     "AsyncTeamAgents",
     "TeamUsage",
     "AsyncTeamUsage",
+    "Tickets",
+    "AsyncTickets",
+    "Tiers",
+    "AsyncTiers",
+    "Usage",
+    "AsyncUsage",
 ]

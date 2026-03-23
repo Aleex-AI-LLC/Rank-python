@@ -151,6 +151,51 @@ class InvitationListResponse(RankModel):
     stats: Optional[InvitationStats] = None
 
 
+class UserInvitation(RankModel):
+    """An invitation as seen from the recipient user's perspective.
+
+    Returned by ``GET /invitations`` (user-level).  Fields differ from
+    :class:`TeamInvitation` (which is the team-admin view).
+
+    The ``token`` is needed to call ``accept()`` or ``reject()``.
+    """
+
+    id: int
+    token: Optional[str] = None
+    team_id: Optional[int] = None
+    team_name: Optional[str] = None
+    inviter_name: Optional[str] = None
+    role_name: Optional[str] = None
+    expires_at: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class UserInvitationListResponse(RankModel):
+    """Response from ``GET /invitations`` (user-level, paginated)."""
+
+    items: List[UserInvitation] = []
+    pagination: Optional[PaginationInfo] = None
+
+
+class InvitationDetail(RankModel):
+    """Detailed invitation info returned by ``GET /invitations/{token}``."""
+
+    team_name: Optional[str] = None
+    inviter_name: Optional[str] = None
+    inviter_email: Optional[str] = None
+    email: Optional[str] = None
+    expires_at: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class InvitationAcceptResponse(RankModel):
+    """Response from ``POST /invitations/{token}/accept``."""
+
+    message: str = ""
+    team_id: Optional[int] = None
+    team_name: Optional[str] = None
+
+
 class InvitationCreateResponse(RankModel):
     """Response from creating or resending a team invitation."""
 
@@ -419,12 +464,17 @@ __all__ = [
     # Roles
     "TeamRole",
     "RoleListResponse",
-    # Invitations
+    # Invitations (team-scoped)
     "InvitationStats",
     "TeamInvitation",
     "InvitationListPagination",
     "InvitationListResponse",
     "InvitationCreateResponse",
+    # Invitations (user-level)
+    "UserInvitation",
+    "UserInvitationListResponse",
+    "InvitationDetail",
+    "InvitationAcceptResponse",
     # Agents
     "TeamAgentItem",
     "TeamAgentDetail",

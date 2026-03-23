@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from .agents import Agents, AsyncAgents
-from .mcps import AgentMcps, AsyncAgentMcps
+from .mcp_servers import AsyncMcpServers, McpServers
+from .agent_mcps import AgentMcps, AsyncAgentMcps
+from .models import AIModels, AsyncAIModels
 from .tools import AgentTools, AsyncAgentTools
 
 __all__ = [
@@ -11,4 +13,8 @@ __all__ = [
     "AsyncAgentTools",
     "AgentMcps",
     "AsyncAgentMcps",
+    "AIModels",
+    "AsyncAIModels",
+    "McpServers",
+    "AsyncMcpServers",
 ]

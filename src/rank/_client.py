@@ -17,9 +17,15 @@ from ._constants import (
 from .resources.agents import Agents, AsyncAgents
 from .resources.ai import AI, AsyncAI
 from .resources.auth import AsyncAuth, Auth
+from .resources.billing import AsyncBilling, Billing
 from .resources.chats import AsyncChats, Chats
+from .resources.invitations import AsyncUserInvitations, UserInvitations
 from .resources.pentests import AsyncPentests, Pentests
+from .resources.permissions import AsyncPermissions, Permissions
 from .resources.teams import AsyncTeams, Teams
+from .resources.tickets import AsyncTickets, Tickets
+from .resources.tiers import AsyncTiers, Tiers
+from .resources.usage import AsyncUsage, Usage
 
 
 class Rank:
@@ -46,6 +52,12 @@ class Rank:
     teams: Teams
     agents: Agents
     chats: Chats
+    tiers: Tiers
+    invitations: UserInvitations
+    permissions: Permissions
+    tickets: Tickets
+    usage: Usage
+    billing: Billing
 
     def __init__(
         self,
@@ -93,6 +105,12 @@ class Rank:
         self.teams = Teams(self._api_client)
         self.agents = Agents(self._api_client)
         self.chats = Chats(self._api_client)
+        self.tiers = Tiers(self._api_client)
+        self.invitations = UserInvitations(self._api_client)
+        self.permissions = Permissions(self._api_client)
+        self.tickets = Tickets(self._api_client)
+        self.usage = Usage(self._api_client)
+        self.billing = Billing(self._api_client)
 
     @property
     def api_client(self) -> SyncAPIClient:
@@ -143,6 +161,12 @@ class AsyncRank:
     teams: AsyncTeams
     agents: AsyncAgents
     chats: AsyncChats
+    tiers: AsyncTiers
+    invitations: AsyncUserInvitations
+    permissions: AsyncPermissions
+    tickets: AsyncTickets
+    usage: AsyncUsage
+    billing: AsyncBilling
 
     def __init__(
         self,
@@ -190,6 +214,12 @@ class AsyncRank:
         self.teams = AsyncTeams(self._api_client)
         self.agents = AsyncAgents(self._api_client)
         self.chats = AsyncChats(self._api_client)
+        self.tiers = AsyncTiers(self._api_client)
+        self.invitations = AsyncUserInvitations(self._api_client)
+        self.permissions = AsyncPermissions(self._api_client)
+        self.tickets = AsyncTickets(self._api_client)
+        self.usage = AsyncUsage(self._api_client)
+        self.billing = AsyncBilling(self._api_client)
 
     @property
     def api_client(self) -> AsyncAPIClient:
