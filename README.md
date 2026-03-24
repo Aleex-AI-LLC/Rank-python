@@ -4,7 +4,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/rank-sdk.svg)](https://pypi.org/project/rank-sdk/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-The official Python library for the [Rank API](https://docs.aleex-rank.ai) — AI-powered autonomous pentesting.
+The official Python library for the [Rank API](https://aleex-rank.ai) — AI-powered autonomous pentesting.
 
 Rank lets you run full penetration tests driven by AI agents in minutes. This SDK provides convenient access to the Rank REST API and real-time streaming from Python 3.8+, with both synchronous and asynchronous clients.
 
