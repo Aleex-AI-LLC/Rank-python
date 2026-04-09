@@ -34,7 +34,7 @@ from ._exceptions import (
     RateLimitError,
     UnprocessableEntityError,
 )
-from ._streaming import AsyncStream, ServerSentEvent, Stream
+from ._streaming import AgentEvent, AsyncStream, ServerSentEvent, Stream
 from ._utils._transform import NOT_GIVEN
 from .types import (
     # AI
@@ -271,6 +271,7 @@ __all__ = [
     "Stream",
     "AsyncStream",
     "ServerSentEvent",
+    "AgentEvent",
     # Utilities
     "NOT_GIVEN",
     # AI types

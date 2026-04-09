@@ -1,11 +1,103 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
-from typing import Any, Iterator, Optional, AsyncIterator
+from dataclasses import dataclass, field
+from typing import Any, Iterator, Optional, AsyncIterator, Union
 
 import httpx
 
+
+# ---------------------------------------------------------------------------
+# AgentEvent — typed payload for type="agent_event" SSE messages
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AgentEvent:
+    """Structured payload carried inside ``type="agent_event"`` SSE messages.
+
+    The ``event_type`` field identifies the specific sub-event (see class
+    constants).  ``data`` holds the event-specific payload whose keys depend
+    on ``event_type`` — refer to ``SSE_EVENTS_REFERENCE.md`` for details.
+
+    Attributes:
+        event_type: Sub-event identifier (e.g. ``"tool_call"``, ``"agent_start"``).
+        agent_id: Numeric agent ID, ``"orchestrator"``, or ``None``.
+        parent_agent_id: Parent agent ID for sub-agents.
+        instance_id: Unique per-execution instance key for demultiplexing.
+            For main agents (depth=0) it equals ``str(agent_id)``; for
+            sub-agents it matches ``subagent_spawn.subagent_id``.
+        depth: 0 = top-level agent, 1 = sub-agent.
+        iteration: Current iteration of the agent loop.
+        timestamp: Unix timestamp of the event.
+        data: Event-specific payload dictionary.
+    """
+
+    event_type: str = ""
+    agent_id: Union[int, str, None] = None
+    parent_agent_id: Optional[int] = None
+    instance_id: str = ""
+    depth: int = 0
+    iteration: int = 0
+    timestamp: float = 0.0
+    data: dict[str, Any] = field(default_factory=dict)
+
+    # -- Agent loop events --------------------------------------------------
+    AGENT_START: str = "agent_start"
+    PLAN: str = "plan"
+    ITERATION_START: str = "iteration_start"
+    THINKING: str = "thinking"
+    TOOL_CALL: str = "tool_call"
+    TOOL_RESULT: str = "tool_result"
+    NUDGE: str = "nudge"
+    SUBAGENT_SPAWN: str = "subagent_spawn"
+    SUBAGENT_COMPLETE: str = "subagent_complete"
+    CONTEXT_COMPACTION: str = "context_compaction"
+    SHARED_CONTEXT: str = "shared_context"
+    INTERPRETATION: str = "interpretation"
+    PROGRESS: str = "progress"
+    ITERATION_COMPLETE: str = "iteration_complete"
+    AGENT_FINISHED: str = "agent_finished"
+
+    # -- Orchestration events -----------------------------------------------
+    ORCHESTRATION_START: str = "orchestration_start"
+    ORCHESTRATION_STATUS: str = "orchestration_status"
+    AGENT_STATUS_CHANGE: str = "agent_status_change"
+    CONSOLIDATION_START: str = "consolidation_start"
+    CONSOLIDATION_HEARTBEAT: str = "consolidation_heartbeat"
+    CONSOLIDATION_COMPLETE: str = "consolidation_complete"
+    ORCHESTRATION_COMPLETE: str = "orchestration_complete"
+    ORCHESTRATION_CANCELLED: str = "orchestration_cancelled"
+    PHASE_COMPLETE: str = "phase_complete"
+
+    # -- Browser agent events -----------------------------------------------
+    BROWSER_AGENT_START: str = "browser_agent_start"
+
+    # -- stop_reason values (agent_finished.data.stop_reason) ---------------
+    STOP_GOAL_REACHED: str = "goal_reached"
+    STOP_MAX_ITERATIONS: str = "max_iterations"
+    STOP_BUDGET: str = "budget"
+    STOP_TIMEOUT: str = "timeout"
+    STOP_STAGNATION: str = "stagnation"
+    STOP_CANCELLED: str = "cancelled"
+
+    @classmethod
+    def from_dict(cls, raw: dict[str, Any]) -> AgentEvent:
+        """Build an ``AgentEvent`` from the ``event`` dict inside a StreamMessage."""
+        return cls(
+            event_type=raw.get("event_type", ""),
+            agent_id=raw.get("agent_id"),
+            parent_agent_id=raw.get("parent_agent_id"),
+            instance_id=raw.get("instance_id", ""),
+            depth=raw.get("depth", 0),
+            iteration=raw.get("iteration", 0),
+            timestamp=raw.get("timestamp", 0.0),
+            data=raw.get("data") or {},
+        )
+
+
+# ---------------------------------------------------------------------------
+# ServerSentEvent
+# ---------------------------------------------------------------------------
 
 @dataclass
 class ServerSentEvent:
@@ -60,6 +152,33 @@ class ServerSentEvent:
         if isinstance(self.data, dict):
             return self.data.get("data", {})
         return {}
+
+    # -- Agent-event helpers ------------------------------------------------
+
+    @property
+    def is_agent_event(self) -> bool:
+        """``True`` when this SSE message carries an ``AgentEvent`` payload."""
+        return self.type == "agent_event"
+
+    @property
+    def agent_event(self) -> Optional[AgentEvent]:
+        """Parse and return the :class:`AgentEvent` when ``type="agent_event"``.
+
+        Returns ``None`` for any other event type.
+        """
+        if not self.is_agent_event:
+            return None
+        if isinstance(self.data, dict):
+            raw_event = self.data.get("event")
+            if isinstance(raw_event, dict):
+                return AgentEvent.from_dict(raw_event)
+        return None
+
+    @property
+    def event_type(self) -> Optional[str]:
+        """Shortcut to ``agent_event.event_type`` (``None`` for non-agent events)."""
+        ev = self.agent_event
+        return ev.event_type if ev is not None else None
 
 
 def _parse_sse_line(line: str, current: dict[str, Any]) -> Optional[ServerSentEvent]:
