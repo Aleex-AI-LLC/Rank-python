@@ -218,6 +218,8 @@ for phase in defaults.items:
 Launch the pentest and stream the real-time output. In automatic mode, the agents run all phases sequentially and process vulnerabilities at the end — all within a single stream:
 
 ```python
+from rank import AgentEvent
+
 with client.ai.chat.stream(
     user_prompt="Start the pentest on the configured targets",
     pentest_id=pentest.id,
@@ -233,6 +235,13 @@ with client.ai.chat.stream(
         elif event.type == "phase_complete":
             meta = event.metadata
             print(f"\n[Phase done] {event.content} ({meta.get('progress')}%)")
+        elif event.is_agent_event:
+            ev = event.agent_event
+            if ev.event_type == AgentEvent.TOOL_CALL:
+                print(f"\n[Tool] {ev.data['tool_name']}")
+            elif ev.event_type == AgentEvent.AGENT_FINISHED:
+                print(f"\n[Agent done] reason={ev.data.get('stop_reason')} "
+                      f"findings={ev.data.get('findings')}")
         elif event.type == "processing_vulnerabilities":
             print(f"\n[Processing vulns] {event.content}")
         elif event.type == "vulnerabilities_complete":
@@ -632,23 +641,106 @@ All streaming responses (AI chat and pentest execution) yield `ServerSentEvent` 
 | `event.metadata` | `dict` | Additional data (progress %, vuln counts, elapsed time, etc.) |
 | `event.timestamp` | `float \| None` | Event timestamp |
 | `event.raw_data` | `str` | Raw JSON string before parsing |
+| `event.is_agent_event` | `bool` | `True` when the event carries an `AgentEvent` payload |
+| `event.agent_event` | `AgentEvent \| None` | Parsed `AgentEvent` (only when `type="agent_event"`) |
+| `event.event_type` | `str \| None` | Shortcut to `agent_event.event_type` |
 
-**Event types:**
+**Transport event types:**
 
 | Type | When | Key metadata |
 |---|---|---|
 | `content` | AI-generated text chunk | — |
 | `queued` | Pentest enters the execution queue | — |
 | `ready` | Pentest starts executing | — |
-| `phase_start` | A phase begins | `progress` |
-| `phase_complete` | A phase finishes | `progress` |
-| `processing_vulnerabilities` | AI is analyzing findings | — |
+| `phase_start` | A phase begins | `phase_id`, `agents`, `progress`, `is_last` |
+| `phase_complete` | A phase finishes | `phase_id`, `progress`, `forced_advance` |
+| `phase_retry` | Phase retry (automatic mode) | — |
+| `processing_vulnerabilities` | AI is analyzing findings | `pentest_id` |
 | `vulnerabilities_complete` | Vulnerability processing done | `vulnerabilities_found`, `vulnerabilities_stored` |
-| `agents_update` | Agent status change during execution | — |
-| `complete` | Stream finished successfully | `elapsed_time`, `vulnerabilities_found`, `vulnerabilities_stored` |
+| `agent_event` | Agent/orchestrator activity | `event` field with `AgentEvent` (see below) |
+| `complete` | Stream finished successfully | `pentest_id`, `total_phases`, `elapsed_time`, `vulnerabilities_found`, `vulnerabilities_stored` |
 | `error` | An error occurred | — |
-| `cancelled` | Pentest was cancelled | — |
-| `reconnected` | Reconnected to an existing stream | — |
+| `cancelled` | Pentest was cancelled | `pentest_id`, `cancelled_at_phase` |
+| `reconnected` | Reconnected to an existing stream | `current_phase`, `total_phases`, `progress` |
+
+### AgentEvent
+
+When `event.type == "agent_event"`, access the structured payload via `event.agent_event`. The `AgentEvent` dataclass has these fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `event_type` | `str` | Sub-event identifier (see tables below) |
+| `agent_id` | `int \| str \| None` | Agent ID (numeric), `"orchestrator"`, or `None` |
+| `parent_agent_id` | `int \| None` | Parent agent ID (for sub-agents) |
+| `depth` | `int` | `0` = top-level agent, `1` = sub-agent |
+| `iteration` | `int` | Current iteration of the agent loop |
+| `timestamp` | `float` | Unix timestamp |
+| `data` | `dict` | Event-specific payload |
+
+**Agent loop event types** (`agent_id` = numeric agent ID):
+
+| `event_type` | When | Key fields in `data` |
+|---|---|---|
+| `agent_start` | Agent begins its ReAct loop | `model`, `phase`, `mission`, `max_iterations`, `tools` |
+| `plan` | Attack plan generated | `plan_text` |
+| `iteration_start` | Iteration begins | `iteration`, `max_iterations`, `tokens_used`, `stagnation` |
+| `thinking` | Model reasoning (thinking/reasoning) | `content` |
+| `tool_call` | Before executing a tool | `tool_name`, `tool_args` |
+| `tool_result` | Tool execution result | `tool_name`, `result`, `duration_ms`, `cached`, `blocked`, `skipped` |
+| `nudge` | Nudge to avoid premature termination | `nudge_count`, `unused_tools` |
+| `subagent_spawn` | Sub-agent launched | `subagent_id`, `mission`, `depth` |
+| `subagent_complete` | Sub-agent finished | `subagent_id`, `result_preview`, `iterations`, `findings` |
+| `context_compaction` | Agent context compacted | `before_entries`, `after_entries`, `tokens_saved` |
+| `progress` | Periodic progress update | `progress_log`, `findings_count` |
+| `agent_finished` | Agent finished execution | `stop_reason`, `iterations`, `findings`, `output_tokens`, `input_tokens`, `elapsed_s` |
+
+**Orchestration event types** (`agent_id` = `"orchestrator"`):
+
+| `event_type` | When | Key fields in `data` |
+|---|---|---|
+| `orchestration_start` | Multi-agent phase begins | `agents`, `phase`, `total_agents` |
+| `orchestration_status` | Periodic status (~30s) | `alive_agents`, `completed_agents`, `elapsed_time` |
+| `agent_status_change` | Agent changes state | `agent_id`, `status`, `reasoning` |
+| `consolidation_start` | Result consolidation begins | `agents_completed` |
+| `consolidation_heartbeat` | Keepalive during consolidation (~10s) | `elapsed_seconds`, `message` |
+| `consolidation_complete` | Consolidation finished | `input_tokens`, `output_tokens` |
+| `orchestration_complete` | Multi-agent phase completed | `phase`, `total_agents`, `successful`, `failed` |
+
+**Browser agent event types:**
+
+| `event_type` | When | Key fields in `data` |
+|---|---|---|
+| `browser_agent_start` | Browser agent starts a mission | `mission`, `target_url`, `max_iterations` |
+| `tool_call` / `tool_result` | Browser tool execution | Same fields as agent loop tool events |
+
+All `event_type` values are available as constants on the `AgentEvent` class (e.g. `AgentEvent.TOOL_CALL`, `AgentEvent.AGENT_FINISHED`).
+
+**Handling agent events:**
+
+```python
+from rank import AgentEvent
+
+with client.ai.chat.stream(...) as stream:
+    for event in stream:
+        if event.type == "content":
+            print(event.content, end="", flush=True)
+
+        elif event.is_agent_event:
+            ev = event.agent_event
+            if ev.event_type == AgentEvent.ORCHESTRATION_START:
+                for ag in ev.data.get("agents", []):
+                    print(f"  Agent [{ag['id']}] {ag['name']}")
+            elif ev.event_type == AgentEvent.TOOL_CALL:
+                print(f"  Tool: {ev.data['tool_name']}")
+            elif ev.event_type == AgentEvent.TOOL_RESULT:
+                print(f"  Result: {ev.data['result'][:100]}")
+            elif ev.event_type == AgentEvent.AGENT_FINISHED:
+                print(f"  Done: {ev.data['stop_reason']} "
+                      f"({ev.data['findings']} findings)")
+
+        elif event.type == "complete":
+            print("\nStream finished!")
+```
 
 ## Agents
 
