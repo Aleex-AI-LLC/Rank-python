@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json as _json
 import os
-from typing import IO, Any, Dict, List, Literal, Tuple, Union
+from typing import IO, Any, Dict, List, Literal, Optional, Tuple, Union
 
 from ..._base_client import AsyncAPIClient, SyncAPIClient
 from ..._streaming import AsyncStream, Stream
@@ -11,6 +11,9 @@ from ...types.ai import ChatMessage
 from .._base import AsyncAPIResource, SyncAPIResource
 
 _CHAT_PATH = "/chat"
+
+MAX_FILES = 10
+MAX_COMBINED_FILE_SIZE = 50 * 1024 * 1024
 
 FileContent = Union[IO[bytes], bytes]
 FileTypes = Union[
@@ -32,15 +35,77 @@ def _normalize_context(
     ]
 
 
+def _resolve_files(
+    file: Union[FileTypes, _NotGiven],
+    files: Union[List[FileTypes], _NotGiven],
+) -> List[FileTypes]:
+    """Merge the singular ``file`` and plural ``files`` arguments into a list.
+
+    Validates the per-request count and the combined size (best-effort, when
+    the size of each attachment can be determined without consuming it).
+    """
+    if not isinstance(file, _NotGiven) and not isinstance(files, _NotGiven):
+        raise ValueError("Pass either 'file' or 'files', not both")
+
+    if not isinstance(files, _NotGiven):
+        if not isinstance(files, list):
+            raise ValueError("'files' must be a list; use 'file' for a single attachment")
+        resolved = list(files)
+    elif not isinstance(file, _NotGiven):
+        resolved = [file]
+    else:
+        return []
+
+    if not resolved:
+        return []
+
+    if len(resolved) > MAX_FILES:
+        raise ValueError(f"Too many files: max {MAX_FILES} per request")
+
+    total = 0
+    for f in resolved:
+        size = _known_size(_file_content(f))
+        if size is not None:
+            total += size
+    if total > MAX_COMBINED_FILE_SIZE:
+        raise ValueError("Combined file size too large: max 50 MB per request")
+
+    return resolved
+
+
+def _file_content(f: FileTypes) -> Any:
+    """Return the raw content object from a ``FileTypes`` value."""
+    if isinstance(f, tuple):
+        return f[1]
+    return f
+
+
+def _known_size(content: Any) -> Optional[int]:
+    """Return the byte size of ``content`` without consuming it, or ``None``."""
+    if isinstance(content, (bytes, bytearray)):
+        return len(content)
+    try:
+        if hasattr(content, "seek") and hasattr(content, "tell") and content.seekable():
+            pos = content.tell()
+            content.seek(0, os.SEEK_END)
+            end = content.tell()
+            content.seek(pos)
+            return end - pos
+    except Exception:
+        return None
+    return None
+
+
 def _prepare_multipart(
     body: Dict[str, Any],
-    file: FileTypes,
-) -> Tuple[Dict[str, Any], Dict[str, str]]:
-    """Build ``(files_dict, form_body)`` for httpx multipart upload.
+    files: List[FileTypes],
+) -> Tuple[List[Tuple[str, Any]], Dict[str, str]]:
+    """Build ``(multipart_files, form_body)`` for httpx multipart upload.
 
-    The Go backend parses multipart fields as strings, so complex
-    values (lists, dicts) are JSON-serialised and integers are
-    stringified.
+    The Go backend parses multipart fields as strings, so complex values
+    (lists, dicts) are JSON-serialised and integers are stringified. Every
+    attachment is sent as a separate ``"file"`` part; the backend reads all
+    parts regardless of order.
     """
     form_body: Dict[str, str] = {}
     for key, value in body.items():
@@ -49,15 +114,17 @@ def _prepare_multipart(
         elif value is not None:
             form_body[key] = str(value)
 
-    if isinstance(file, (bytes, bytearray)):
-        files: Dict[str, Any] = {"file": ("file", file)}
-    elif isinstance(file, tuple):
-        files = {"file": file}
-    else:
-        name = os.path.basename(getattr(file, "name", "file"))
-        files = {"file": (name, file)}
+    multipart_files: List[Tuple[str, Any]] = []
+    for f in files:
+        if isinstance(f, (bytes, bytearray)):
+            multipart_files.append(("file", ("file", f)))
+        elif isinstance(f, tuple):
+            multipart_files.append(("file", f))
+        else:
+            name = os.path.basename(getattr(f, "name", "file"))
+            multipart_files.append(("file", (name, f)))
 
-    return files, form_body
+    return multipart_files, form_body
 
 
 # ---------------------------------------------------------------------------
@@ -103,12 +170,22 @@ class Chat(SyncAPIResource):
             for event in stream:
                 print(event.type, event.content)
 
-        # With file attachment
+        # With a single file attachment
         with open("report.pdf", "rb") as f:
             with client.ai.chat.stream(
                 agent_id=23,
                 user_prompt="Analiza este documento",
                 file=f,
+            ) as stream:
+                for event in stream:
+                    print(event.content, end="")
+
+        # With multiple file attachments
+        with open("report.pdf", "rb") as a, open("diagram.png", "rb") as b:
+            with client.ai.chat.stream(
+                agent_id=23,
+                user_prompt="Analiza estos archivos",
+                files=[a, b],
             ) as stream:
                 for event in stream:
                     print(event.content, end="")
@@ -126,6 +203,7 @@ class Chat(SyncAPIResource):
         phase_id: Union[int, _NotGiven] = NOT_GIVEN,
         context: Union[List[Union[ChatMessage, Dict[str, str]]], _NotGiven] = NOT_GIVEN,
         file: Union[FileTypes, _NotGiven] = NOT_GIVEN,
+        files: Union[List[FileTypes], _NotGiven] = NOT_GIVEN,
     ) -> Stream:
         """Send a chat message and stream the AI response via SSE.
 
@@ -161,12 +239,16 @@ class Chat(SyncAPIResource):
                 with keys ``"userPrompt"`` and ``"aiResponse"``.
                 If omitted and ``chat_id`` is provided, the backend
                 fetches context automatically.
-            file: Optional file attachment.  Accepted formats:
+            file: Optional single file attachment.  Accepted formats:
                 a file-like object (``open("f.pdf", "rb")``),
                 raw ``bytes``, a ``(filename, content)`` tuple, or
                 a ``(filename, content, content_type)`` tuple.
+            files: Optional list of file attachments (each in the same
+                formats accepted by ``file``).  Use this to send several
+                attachments in one request.  ``file`` and ``files`` are
+                mutually exclusive.
                 Supported extensions: PDF, JSON, PNG, JPEG, WEBP, GIF.
-                Max size: 30 MB.
+                Limits: up to 10 files, 30 MB per file and 50 MB combined.
         """
         body: Dict[str, Any] = {"user_prompt": user_prompt}
         body.update(strip_not_given({
@@ -179,10 +261,11 @@ class Chat(SyncAPIResource):
             "context": _normalize_context(context),
         }))
 
-        if not isinstance(file, _NotGiven):
-            files, form_body = _prepare_multipart(body, file)
+        resolved_files = _resolve_files(file, files)
+        if resolved_files:
+            multipart_files, form_body = _prepare_multipart(body, resolved_files)
             return self._client.stream_request(
-                "POST", _CHAT_PATH, body=form_body, files=files,
+                "POST", _CHAT_PATH, body=form_body, files=multipart_files,
             )
 
         return self._client.stream_request("POST", _CHAT_PATH, body=body)
@@ -208,6 +291,7 @@ class AsyncChat(AsyncAPIResource):
         phase_id: Union[int, _NotGiven] = NOT_GIVEN,
         context: Union[List[Union[ChatMessage, Dict[str, str]]], _NotGiven] = NOT_GIVEN,
         file: Union[FileTypes, _NotGiven] = NOT_GIVEN,
+        files: Union[List[FileTypes], _NotGiven] = NOT_GIVEN,
     ) -> AsyncStream:
         """Send a chat message and stream the AI response via SSE.
 
@@ -234,8 +318,11 @@ class AsyncChat(AsyncAPIResource):
             phase_id: Phase ID to execute (guided mode only).
             context: Explicit conversation context as
                 :class:`~rank.types.ai.ChatMessage` objects or dicts.
-            file: Optional file attachment (see sync variant for
+            file: Optional single file attachment (see sync variant for
                 accepted formats).
+            files: Optional list of file attachments.  Mutually exclusive
+                with ``file``.  Up to 10 files, 30 MB per file and 50 MB
+                combined.
         """
         body: Dict[str, Any] = {"user_prompt": user_prompt}
         body.update(strip_not_given({
@@ -248,10 +335,11 @@ class AsyncChat(AsyncAPIResource):
             "context": _normalize_context(context),
         }))
 
-        if not isinstance(file, _NotGiven):
-            files, form_body = _prepare_multipart(body, file)
+        resolved_files = _resolve_files(file, files)
+        if resolved_files:
+            multipart_files, form_body = _prepare_multipart(body, resolved_files)
             return await self._client.stream_request(
-                "POST", _CHAT_PATH, body=form_body, files=files,
+                "POST", _CHAT_PATH, body=form_body, files=multipart_files,
             )
 
         return await self._client.stream_request("POST", _CHAT_PATH, body=body)
