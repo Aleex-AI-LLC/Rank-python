@@ -615,6 +615,7 @@ with client.ai.chat.stream(
 **File analysis:**
 
 ```python
+# Single attachment
 with open("report.pdf", "rb") as f:
     with client.ai.chat.stream(
         agent_id=23,
@@ -625,7 +626,23 @@ with open("report.pdf", "rb") as f:
         for event in stream:
             if event.type == "content":
                 print(event.content, end="", flush=True)
+
+# Multiple attachments (use `files` with a list)
+with open("report.pdf", "rb") as a, open("diagram.png", "rb") as b:
+    with client.ai.chat.stream(
+        agent_id=23,
+        user_prompt="Cross-reference these files and summarize the findings",
+        chat_id=chat.id,
+        files=[a, b],
+    ) as stream:
+        for event in stream:
+            if event.type == "content":
+                print(event.content, end="", flush=True)
 ```
+
+Attachments accept PDF, JSON, PNG, JPEG, WEBP and GIF. Use `file` for a single
+attachment or `files` for several (they are mutually exclusive). Limits: up to
+10 files, 30 MB per file and 50 MB combined per request.
 
 The `chat_id` parameter maintains conversation context, so you can ask follow-up questions in the same session.
 
