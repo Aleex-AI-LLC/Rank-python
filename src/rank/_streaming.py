@@ -17,15 +17,23 @@ class AgentEvent:
 
     The ``event_type`` field identifies the specific sub-event (see class
     constants).  ``data`` holds the event-specific payload whose keys depend
-    on ``event_type`` — refer to ``SSE_EVENTS_REFERENCE.md`` for details.
+    on ``event_type`` — refer to the "Streaming Events Reference" section of
+    the README for the full field-by-field breakdown.
+
+    The same envelope is used by the pentest flow and by the general agentic
+    flow (``agent_type="general"`` agents running a long-form ReAct loop).
+    A few ``event_type`` values carry different ``data`` keys depending on the
+    flow (e.g. ``interpretation``, ``progress``, ``context_compaction``);
+    treat ``data`` as opaque and read the keys documented for your flow.
 
     Attributes:
         event_type: Sub-event identifier (e.g. ``"tool_call"``, ``"agent_start"``).
         agent_id: Numeric agent ID, ``"orchestrator"``, or ``None``.
         parent_agent_id: Parent agent ID for sub-agents.
         instance_id: Unique per-execution instance key for demultiplexing.
-            For main agents (depth=0) it equals ``str(agent_id)``; for
-            sub-agents it matches ``subagent_spawn.subagent_id``.
+            General main agents (depth=0) use ``general_<agentId>_<hex>``;
+            sub-agents use ``<agentId>_sub<N>`` and match
+            ``subagent_spawn.subagent_id``.  Group events by ``instance_id``.
         depth: 0 = top-level agent, 1 = sub-agent.
         iteration: Current iteration of the agent loop.
         timestamp: Unix timestamp of the event.
@@ -48,6 +56,7 @@ class AgentEvent:
     THINKING: str = "thinking"
     TOOL_CALL: str = "tool_call"
     TOOL_RESULT: str = "tool_result"
+    TEXT_CHUNK: str = "text_chunk"
     NUDGE: str = "nudge"
     SUBAGENT_SPAWN: str = "subagent_spawn"
     SUBAGENT_COMPLETE: str = "subagent_complete"
