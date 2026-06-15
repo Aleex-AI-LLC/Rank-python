@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rank-sdk"
-version = "0.1.2"
+dynamic = ["version"]
 description = "The official Python library for the Rank API"
 readme = "README.md"
 license = "MIT"
@@ -39,6 +39,10 @@ dependencies = [
 Homepage = "https://github.com/Aleex-AI-LLC/rank-python"
 Documentation = "https://docs.aleex-rank.ai"
 Repository = "https://github.com/Aleex-AI-LLC/rank-python"
+
+[tool.hatch.version]
+path = "src/rank/_constants.py"
+pattern = 'PACKAGE_VERSION = "(?P<version>[^"]+)"'
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rank"]
