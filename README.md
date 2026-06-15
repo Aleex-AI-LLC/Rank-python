@@ -569,7 +569,7 @@ global_summary = client.pentests.vulnerabilities.global_summary()
 
 ## AI Chat
 
-Beyond pentesting, Rank's general-purpose agents can perform **agentic research tasks** — they autonomously browse, search, and cross-reference sources to deliver structured results. Think of them as security-focused research assistants that can execute multi-step workflows from a single prompt.
+Beyond pentesting, Rank's general-purpose agents can perform **agentic research tasks** — they autonomously plan, browse, search, run tools, and cross-reference sources to deliver structured results. Think of them as security-focused research assistants that can execute multi-step workflows from a single prompt.
 
 ```python
 chat = client.chats.create(nombre="Security Research")
@@ -580,7 +580,18 @@ for a in agents.items:
     print(f"[{a.id}] {a.name}")
 ```
 
-**Deep vulnerability research:**
+### One-shot vs. agentic
+
+A general agent runs in one of two modes, decided automatically by the backend:
+
+| Mode | When | What you receive |
+|---|---|---|
+| **One-shot** | The agent's model is not agentic, or the agent has no tools assigned | A single answer streamed as `content`, then `complete` |
+| **Agentic** | The agent's model has the agentic flag **and** the agent has at least one tool | A live ReAct loop (plan, tool calls, observations, reflection) streamed as `agent_event` activity, plus the final answer streamed as `content` |
+
+> **Golden rule:** build the assistant's message by concatenating **only** the `content` events. `agent_event` messages describe what the agent is doing (thinking, calling tools, delegating to sub-agents) and are meant for an "activity" / timeline view — never concatenate them into the answer body.
+
+Both modes are consumed with the exact same loop. If you only care about the final answer, just handle `content` and ignore everything else:
 
 ```python
 with client.ai.chat.stream(
@@ -597,7 +608,89 @@ with client.ai.chat.stream(
             print()
 ```
 
-**IP investigation:**
+To also surface the live activity of an agentic run, handle `agent_event` (see the [Streaming Events Reference](#streaming-events-reference) for every field):
+
+```python
+from rank import AgentEvent
+
+with client.ai.chat.stream(
+    agent_id=23,
+    user_prompt="Investigate this target end-to-end and summarize the exposure.",
+    chat_id=chat.id,
+) as stream:
+    for event in stream:
+        if event.type == "content":
+            # The actual answer — only this builds the message body.
+            print(event.content, end="", flush=True)
+
+        elif event.is_agent_event:
+            ev = event.agent_event
+            indent = "    " if ev.depth > 0 else ""  # sub-agents are nested
+            if ev.event_type == AgentEvent.THINKING:
+                print(f"\n{indent}[thinking] {ev.data['content'][:80]}")
+            elif ev.event_type == AgentEvent.TOOL_CALL:
+                print(f"\n{indent}[tool] {ev.data['tool_name']}")
+            elif ev.event_type == AgentEvent.SUBAGENT_SPAWN:
+                print(f"\n{indent}[subagent {ev.data['subagent_id']}] {ev.data['mission']}")
+            elif ev.event_type == AgentEvent.TEXT_CHUNK:
+                # Sub-agent text (depth > 0). Activity only — NOT the answer.
+                print(f"{indent}{ev.data['content']}", end="", flush=True)
+            elif ev.event_type == AgentEvent.AGENT_FINISHED:
+                print(f"\n{indent}[done] {ev.data.get('stop_reason')}")
+
+        elif event.type == "complete":
+            print("\n[stream finished]")
+```
+
+> **Sub-agents:** if the agent has the `spawn_subagent` tool, it can delegate subtasks to sub-agents that run with isolated context. Their activity streams in live (nested via `depth` and `parent_agent_id`), but their final text is **not** part of the chat answer: it comes back to the main agent as a tool result. Sub-agent text arrives as `agent_event` with `event_type="text_chunk"` (`depth > 0`), and its consolidated summary appears in `subagent_complete.result_preview`. Group an instance's events by `instance_id`.
+
+### Long-running agentic tasks
+
+Because an agentic general agent keeps iterating until the objective is fully covered, it is ideal for **one-off, long-running tasks** described in a single natural-language prompt — you don't write any orchestration logic. State the goal and a stop condition and the agent will plan, run tools, branch on what it discovers, and keep going (bounded by its `max_iterations`, budget and timeout) until it can report back. The run ends with an `agent_finished` event whose `stop_reason` is usually `goal_reached`.
+
+Tips for writing these prompts:
+
+- State the end-to-end objective and an explicit stop condition (e.g. *"don't stop until..."*).
+- Describe branching (*"if you find X, do Y; otherwise..."*) — the agent decides each step.
+- Ask for a final consolidated summary so the answer (`content`) wraps everything up.
+
+```python
+with client.ai.chat.stream(
+    agent_id=23,
+    user_prompt=(
+        "Analyze the IP 203.0.113.42 step by step. If you find a web server, "
+        "enumerate common directories and look for known vulnerabilities; if "
+        "there are other services (SSH, etc.), report versions and relevant "
+        "CVEs. Don't stop until you've reviewed every open port, and summarize "
+        "everything at the end."
+    ),
+    chat_id=chat.id,
+) as stream:
+    for event in stream:
+        if event.type == "content":          # the final, consolidated answer
+            print(event.content, end="", flush=True)
+        elif event.type == "complete":
+            print("\n[done]")
+```
+
+The agent runs the whole investigation autonomously in a single request. To also render each step as it happens (iterations, tool calls, sub-agents), handle `agent_event` exactly as in the agentic example above.
+
+More prompts that map well to a single long-running run:
+
+```python
+# Prioritized CVE triage over a feed
+"Triage the CVEs published this week affecting nginx or Apache. For each one, "
+"fetch the CVSS vector, confirm the affected versions, and build a prioritized "
+"remediation table. Don't finish until every item is classified."
+
+# Attack-surface mapping
+"Map the attack surface of example.com step by step: enumerate subdomains, "
+"identify live hosts and their tech stack, and flag anything outdated or "
+"known-vulnerable. Keep going until all subdomains are checked, then summarize "
+"the riskiest findings."
+```
+
+**IP investigation (simple, one-shot style):**
 
 ```python
 with client.ai.chat.stream(
@@ -689,6 +782,7 @@ When `event.type == "agent_event"`, access the structured payload via `event.age
 | `event_type` | `str` | Sub-event identifier (see tables below) |
 | `agent_id` | `int \| str \| None` | Agent ID (numeric), `"orchestrator"`, or `None` |
 | `parent_agent_id` | `int \| None` | Parent agent ID (for sub-agents) |
+| `instance_id` | `str` | Unique per-execution key for grouping events. General main agents use `general_<agentId>_<hex>`; sub-agents use `<agentId>_sub<N>` |
 | `depth` | `int` | `0` = top-level agent, `1` = sub-agent |
 | `iteration` | `int` | Current iteration of the agent loop |
 | `timestamp` | `float` | Unix timestamp |
@@ -704,6 +798,7 @@ When `event.type == "agent_event"`, access the structured payload via `event.age
 | `thinking` | Model reasoning (thinking/reasoning) | `content` |
 | `tool_call` | Before executing a tool | `tool_name`, `tool_args` |
 | `tool_result` | Tool execution result | `tool_name`, `result`, `duration_ms`, `cached`, `blocked`, `skipped` |
+| `text_chunk` | Streaming text from a **sub-agent** (`depth > 0`) | `content` |
 | `nudge` | Nudge to avoid premature termination | `nudge_count`, `unused_tools` |
 | `subagent_spawn` | Sub-agent launched | `subagent_id`, `mission`, `depth` |
 | `subagent_complete` | Sub-agent finished | `subagent_id`, `result_preview`, `iterations`, `findings` |
@@ -730,7 +825,27 @@ When `event.type == "agent_event"`, access the structured payload via `event.age
 | `browser_agent_start` | Browser agent starts a mission | `mission`, `target_url`, `max_iterations` |
 | `tool_call` / `tool_result` | Browser tool execution | Same fields as agent loop tool events |
 
-All `event_type` values are available as constants on the `AgentEvent` class (e.g. `AgentEvent.TOOL_CALL`, `AgentEvent.AGENT_FINISHED`).
+All `event_type` values are available as constants on the `AgentEvent` class (e.g. `AgentEvent.TOOL_CALL`, `AgentEvent.TEXT_CHUNK`, `AgentEvent.AGENT_FINISHED`).
+
+#### General agentic flow
+
+General agents (`agent_type="general"` running the agentic loop) reuse the same `AgentEvent` envelope, but a few events carry **different `data` keys** than the pentest flow, and there are no orchestration events (a single agent drives the loop, optionally delegating to sub-agents). `data` is an opaque dict, so reading the keys below is all you need:
+
+| `event_type` | Key fields in `data` (general flow) | Notes |
+|---|---|---|
+| `agent_start` | `model`, `agent_id`, `mission`, `max_iterations`, `tools` | No `phase`. |
+| `thinking` | `content`, `streaming` | `streaming=True` when reasoning arrives in live fragments. |
+| `tool_result` | `tool_name`, `result`, `duration_ms`, `skipped` | — |
+| `interpretation` | `content` | Free-form analysis of the tool results (in the pentest flow this event uses `phase` / `tools_interpreted` instead). |
+| `context_compaction` | `summarized_steps`, `summary_chars` | Long-running tasks compact context (pentest flow uses `before_entries` / `after_entries` / `tokens_saved`). |
+| `progress` | `iteration`, `tools_used`, `tokens_used` | Per-iteration progress (pentest flow uses `progress_log` / `findings_count`). |
+| `iteration_complete` | `iteration_prompt`, `iteration_response`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens` | Includes cache token counters. |
+| `text_chunk` | `content` | **Sub-agents only** (`depth > 0`). Live sub-agent text — activity, never part of the answer. |
+| `subagent_spawn` | `subagent_id`, `mission`, `depth` | A sub-agent was launched. |
+| `subagent_complete` | `subagent_id`, `result_preview`, `iterations` | Consolidated sub-agent result summary. |
+| `agent_finished` | `stop_reason`, `iterations`, `input_tokens`, `output_tokens`, `elapsed_s` | No `findings`. `stop_reason` ∈ `goal_reached`, `max_iterations`, `timeout`, `budget`, `stagnation`, `cancelled`. |
+
+Reconstructing the hierarchy in a UI: if `depth > 0` or `parent_agent_id` is set, the event belongs to a sub-agent — group it by `instance_id`. The assistant's answer is still built **only** from top-level `content` messages.
 
 **Handling agent events:**
 
