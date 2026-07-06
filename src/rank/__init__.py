@@ -166,6 +166,8 @@ from .types import (
     QualityGateResponse,
     RiskScore,
     UnassignAgentResponse,
+    VulnProcessingStatus,
+    VulnSeveritySummary,
     Vulnerability,
     VulnerabilityAcceptRiskResponse,
     VulnerabilityAssignResponse,
@@ -437,6 +439,8 @@ __all__ = [
     "PentestCancelResponse",
     "ProcessedVulnerability",
     "ProcessVulnerabilitiesResponse",
+    "VulnSeveritySummary",
+    "VulnProcessingStatus",
     "GenerateReportResponse",
     # Team types
     "Team",
