@@ -991,6 +991,40 @@ cloned = client.agents.clone(agent.agent.id)
 client.agents.delete(agent.agent.id)
 ```
 
+### Reasoning: effort and thinking
+
+Agents can override the reasoning behaviour of their model. Two optional settings are available on `create` and `update` (and on `client.teams.agents.create`):
+
+- `effort`: how much reasoning depth the agent uses. Valid values, ordered by ascending intensity, are `"none"`, `"minimal"`, `"low"`, `"medium"`, `"high"`, `"xhigh"`, `"max"`.
+- `thinking_enabled`: turns the agent's thinking/reasoning on or off.
+
+Both are optional. When omitted, the agent inherits the model default. A value is only accepted if the model supports it — check the model's capabilities first via `supports_effort`, `effort_values`, `default_effort`, and `supports_thinking_toggle`:
+
+```python
+# Inspect what a model supports before configuring an agent
+model = client.agents.models.retrieve(model_id=6)
+print(model.supports_effort, model.effort_values, model.default_effort)
+print(model.supports_thinking_toggle)
+
+# Create an agent with an explicit reasoning configuration
+agent = client.agents.create(
+    name="Deep Recon Agent",
+    instructions="Perform an in-depth reconnaissance of the target.",
+    agent_type="pentest",
+    phase_id=1,
+    model_id=6,
+    effort="high",
+    thinking_enabled=True,
+)
+
+# Change the reasoning configuration later
+client.agents.update(agent.agent.id, effort="medium", thinking_enabled=False)
+
+# The resolved values are returned on the agent object
+detail = client.agents.retrieve(agent.agent.id)
+print(detail.effort, detail.thinking_enabled)
+```
+
 ### Tools
 
 Each phase has a set of available tools (scanners, fuzzers, enumeration utilities, etc.). You can customize which tools an agent has access to:

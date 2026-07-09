@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import model_validator
 
-from .shared import PaginationInfo, RankModel
+from .shared import PaginationInfo, RankModel, ReasoningEffort
 
 
 # ---------------------------------------------------------------------------
@@ -32,6 +32,12 @@ class Agent(RankModel):
     phase_name: Optional[str] = None
     model_id: Optional[int] = None
     model_name: Optional[str] = None
+    effort: Optional[ReasoningEffort] = None
+    thinking_enabled: Optional[bool] = None
+    supports_effort: Optional[bool] = None
+    effort_values: List[ReasoningEffort] = []
+    default_effort: Optional[ReasoningEffort] = None
+    supports_thinking_toggle: Optional[bool] = None
     is_default: Optional[bool] = None
     protected: Optional[bool] = None
     created_by: Optional[int] = None

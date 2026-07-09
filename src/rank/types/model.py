@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, List, Optional
 
-from .shared import PaginationInfo, RankModel
+from .shared import PaginationInfo, RankModel, ReasoningEffort
 
 
 class AIModel(RankModel):
@@ -22,6 +22,10 @@ class AIModel(RankModel):
     uploaded_at: Optional[str] = None
     reasoning: Optional[bool] = None
     agentic: Optional[bool] = None
+    supports_effort: Optional[bool] = None
+    effort_values: List[ReasoningEffort] = []
+    default_effort: Optional[ReasoningEffort] = None
+    supports_thinking_toggle: Optional[bool] = None
     max_input_tokens: Optional[int] = None
     max_output_tokens: Optional[int] = None
     context_size: Optional[int] = None

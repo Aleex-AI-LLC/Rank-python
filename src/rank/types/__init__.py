@@ -171,6 +171,7 @@ from .shared import (
     Permission,
     PermissionListResponse,
     RankModel,
+    ReasoningEffort,
     SuccessResponse,
 )
 from .team import (
@@ -274,6 +275,7 @@ __all__ = [
     "OperationLogListResponse",
     # Shared
     "RankModel",
+    "ReasoningEffort",
     "PaginatedResponse",
     "PaginationMeta",
     "PaginationInfo",
