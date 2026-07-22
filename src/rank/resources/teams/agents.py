@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Union
 
 from ..._utils._transform import NOT_GIVEN, _NotGiven, strip_not_given
+from ...types.shared import ReasoningEffort
 from ...types.team import (
     TeamAgentCreateResponse,
     TeamAgentDeleteResponse,
@@ -73,6 +74,8 @@ class TeamAgents(SyncAPIResource):
         phase_id: Union[int, _NotGiven] = NOT_GIVEN,
         model_id: Union[int, _NotGiven] = NOT_GIVEN,
         tool_ids: Union[List[int], _NotGiven] = NOT_GIVEN,
+        effort: Union[ReasoningEffort, _NotGiven] = NOT_GIVEN,
+        thinking_enabled: Union[bool, _NotGiven] = NOT_GIVEN,
     ) -> TeamAgentCreateResponse:
         """Create a new agent for a team.
 
@@ -85,6 +88,12 @@ class TeamAgents(SyncAPIResource):
             phase_id: Required when ``agent_type`` is ``"pentest"``.
             model_id: AI model ID (must be available for the team's tier).
             tool_ids: List of tool IDs to attach.
+            effort: Reasoning-effort override for the agent. One of
+                ``"none"``, ``"minimal"``, ``"low"``, ``"medium"``, ``"high"``,
+                ``"xhigh"``, ``"max"``. Must be supported by the model. When
+                omitted, the agent inherits the model default.
+            thinking_enabled: Whether the agent's thinking/reasoning is on.
+                When omitted, the agent inherits the model default.
 
         Returns:
             Creation confirmation with the full agent details.
@@ -99,6 +108,8 @@ class TeamAgents(SyncAPIResource):
             "phase_id": phase_id,
             "model_id": model_id,
             "tool_ids": tool_ids,
+            "effort": effort,
+            "thinking_enabled": thinking_enabled,
         }))
         return self._client.post(
             f"/teams/{team_id}/agents",
@@ -155,6 +166,8 @@ class AsyncTeamAgents(AsyncAPIResource):
         phase_id: Union[int, _NotGiven] = NOT_GIVEN,
         model_id: Union[int, _NotGiven] = NOT_GIVEN,
         tool_ids: Union[List[int], _NotGiven] = NOT_GIVEN,
+        effort: Union[ReasoningEffort, _NotGiven] = NOT_GIVEN,
+        thinking_enabled: Union[bool, _NotGiven] = NOT_GIVEN,
     ) -> TeamAgentCreateResponse:
         body: Dict[str, Any] = {
             "name": name,
@@ -166,6 +179,8 @@ class AsyncTeamAgents(AsyncAPIResource):
             "phase_id": phase_id,
             "model_id": model_id,
             "tool_ids": tool_ids,
+            "effort": effort,
+            "thinking_enabled": thinking_enabled,
         }))
         return await self._client.post(
             f"/teams/{team_id}/agents",

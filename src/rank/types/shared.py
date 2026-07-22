@@ -3,6 +3,10 @@ from __future__ import annotations
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict
+from typing_extensions import Literal
+
+ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+"""Canonical reasoning-effort scale accepted by the API, ordered by ascending intensity."""
 
 
 class RankModel(BaseModel):

@@ -121,7 +121,7 @@ Each pentest must have at least one asset, and exactly one should be marked as `
 | Mode | Methodology | Phases | Vulnerability processing |
 |---|---|---|---|
 | `automatic` | OWASP Top 10 (forced, `methodology_id=1`) | All phases run sequentially without intervention | Automatic — handled during the stream |
-| `guided` | You choose — list available methodologies first | You control each phase (1-3) individually | Manual — you call `process_vulnerabilities` after the phases |
+| `guided` | You choose — list available methodologies first | You control each phase (1-3) individually | Manual — start `process_vulnerabilities` after the phases, then poll with `wait_for_vulnerabilities` |
 
 #### Automatic mode
 
@@ -256,7 +256,21 @@ with client.ai.chat.stream(
             print(f"\n[Error] {event.error}")
 ```
 
-After the stream completes, vulnerabilities are already processed. You can optionally reprocess them or go straight to finishing:
+After the stream completes, vulnerabilities are already processed (the backend does it automatically at the end of the run). You cannot reprocess them — trying to call `process_vulnerabilities` again returns `409 Conflict`.
+
+If the stream disconnects while vulnerabilities are still being processed, recover the final result by polling the status endpoint instead of re-running the pentest:
+
+```python
+result = client.pentests.wait_for_vulnerabilities(pentest.id, timeout=600)
+if result.status == "completed":
+    print(f"Created: {result.total_created}")
+    if result.summary:
+        print(f"By severity: critical={result.summary.critical} high={result.summary.high}")
+# Or a single, non-blocking check:
+#   status = client.pentests.get_vulnerability_status(pentest.id)
+```
+
+When you're ready, finish the pentest:
 
 ```python
 result = client.pentests.finish(pentest.id)
@@ -307,18 +321,39 @@ with client.ai.chat.stream(
             print(event.content, end="", flush=True)
 ```
 
-After completing the desired phases, process the raw agent outputs into structured vulnerabilities using AI, and then finish the pentest:
+After completing the desired phases, process the raw agent outputs into structured vulnerabilities using AI, and then finish the pentest.
+
+Vulnerability processing is **asynchronous**: `process_vulnerabilities` only enqueues the job and returns immediately. Block until it finishes with `wait_for_vulnerabilities` (which polls `get_vulnerability_status` under the hood), or poll the status yourself:
 
 ```python
-# Process vulnerabilities
-result = client.pentests.process_vulnerabilities(
+# Start the async processing job
+job = client.pentests.process_vulnerabilities(
     pentest.id,
     model_alias="gemini-2.5-flash",
 )
-print(f"Processed: {result.total_processed}")
-print(f"Vulnerabilities created: {len(result.vulnerabilities_created)}")
-for v in result.vulnerabilities_created:
-    print(f"  vuln_id={v.vulnerability_id}  operation_id={v.operation_id}")
+print(f"Job status: {job.status}")  # "processing"
+
+# Block until it finishes (raises TimeoutError if it takes too long)
+result = client.pentests.wait_for_vulnerabilities(pentest.id, timeout=600)
+
+if result.status == "completed":
+    print(f"Responses analysed  : {result.total_responses}")
+    print(f"Detected            : {result.total_detected}")
+    print(f"Created             : {result.total_created}")
+    if result.summary:
+        s = result.summary
+        print(f"By severity         : critical={s.critical} high={s.high} "
+              f"medium={s.medium} low={s.low} info={s.info}")
+    for v in result.vulnerabilities_created:
+        print(f"  vuln_id={v.vulnerability_id}  operation_id={v.operation_id}")
+else:
+    print(f"Processing failed: {result.error}")
+
+# Or poll manually instead of blocking:
+#   status = client.pentests.get_vulnerability_status(pentest.id)
+#   while status.status == "processing":
+#       time.sleep(3)
+#       status = client.pentests.get_vulnerability_status(pentest.id)
 
 # Finish the pentest
 result = client.pentests.finish(pentest.id)
@@ -766,9 +801,9 @@ All streaming responses (AI chat and pentest execution) yield `ServerSentEvent` 
 | `phase_complete` | A phase finishes | `phase_id`, `progress`, `forced_advance` |
 | `phase_retry` | Phase retry (automatic mode) | — |
 | `processing_vulnerabilities` | AI is analyzing findings | `pentest_id` |
-| `vulnerabilities_complete` | Vulnerability processing done | `vulnerabilities_found`, `vulnerabilities_stored` |
+| `vulnerabilities_complete` | Vulnerability processing done | `vulnerabilities_found`, `vulnerabilities_stored`, `summary` (severity breakdown) |
 | `agent_event` | Agent/orchestrator activity | `event` field with `AgentEvent` (see below) |
-| `complete` | Stream finished successfully | `pentest_id`, `total_phases`, `elapsed_time`, `vulnerabilities_found`, `vulnerabilities_stored` |
+| `complete` | Stream finished successfully | `pentest_id`, `total_phases`, `elapsed_time`, `vulnerabilities_found`, `vulnerabilities_stored`, `summary` |
 | `error` | An error occurred | — |
 | `cancelled` | Pentest was cancelled | `pentest_id`, `cancelled_at_phase` |
 | `reconnected` | Reconnected to an existing stream | `current_phase`, `total_phases`, `progress` |
@@ -954,6 +989,40 @@ general_agent = client.agents.create(
 client.agents.update(agent.agent.id, name="Recon Agent v2")
 cloned = client.agents.clone(agent.agent.id)
 client.agents.delete(agent.agent.id)
+```
+
+### Reasoning: effort and thinking
+
+Agents can override the reasoning behaviour of their model. Two optional settings are available on `create` and `update` (and on `client.teams.agents.create`):
+
+- `effort`: how much reasoning depth the agent uses. Valid values, ordered by ascending intensity, are `"none"`, `"minimal"`, `"low"`, `"medium"`, `"high"`, `"xhigh"`, `"max"`.
+- `thinking_enabled`: turns the agent's thinking/reasoning on or off.
+
+Both are optional. When omitted, the agent inherits the model default. A value is only accepted if the model supports it — check the model's capabilities first via `supports_effort`, `effort_values`, `default_effort`, and `supports_thinking_toggle`:
+
+```python
+# Inspect what a model supports before configuring an agent
+model = client.agents.models.retrieve(model_id=6)
+print(model.supports_effort, model.effort_values, model.default_effort)
+print(model.supports_thinking_toggle)
+
+# Create an agent with an explicit reasoning configuration
+agent = client.agents.create(
+    name="Deep Recon Agent",
+    instructions="Perform an in-depth reconnaissance of the target.",
+    agent_type="pentest",
+    phase_id=1,
+    model_id=6,
+    effort="high",
+    thinking_enabled=True,
+)
+
+# Change the reasoning configuration later
+client.agents.update(agent.agent.id, effort="medium", thinking_enabled=False)
+
+# The resolved values are returned on the agent object
+detail = client.agents.retrieve(agent.agent.id)
+print(detail.effort, detail.thinking_enabled)
 ```
 
 ### Tools

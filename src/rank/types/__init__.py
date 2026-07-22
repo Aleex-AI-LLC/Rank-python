@@ -127,6 +127,8 @@ from .pentest import (
     QualityGateResponse,
     RiskScore,
     UnassignAgentResponse,
+    VulnProcessingStatus,
+    VulnSeveritySummary,
     Vulnerability,
     VulnerabilityAcceptRiskResponse,
     VulnerabilityAssignResponse,
@@ -169,6 +171,7 @@ from .shared import (
     Permission,
     PermissionListResponse,
     RankModel,
+    ReasoningEffort,
     SuccessResponse,
 )
 from .team import (
@@ -272,6 +275,7 @@ __all__ = [
     "OperationLogListResponse",
     # Shared
     "RankModel",
+    "ReasoningEffort",
     "PaginatedResponse",
     "PaginationMeta",
     "PaginationInfo",
@@ -399,6 +403,8 @@ __all__ = [
     "PentestCancelResponse",
     "ProcessedVulnerability",
     "ProcessVulnerabilitiesResponse",
+    "VulnSeveritySummary",
+    "VulnProcessingStatus",
     "GenerateReportResponse",
     # Team
     "Team",

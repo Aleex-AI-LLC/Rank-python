@@ -13,6 +13,7 @@ from ...types.agent import (
     AgentListResponse,
     AgentUpdateResponse,
 )
+from ...types.shared import ReasoningEffort
 from .._base import AsyncAPIResource, SyncAPIResource
 from .mcp_servers import AsyncMcpServers, McpServers
 from .agent_mcps import AgentMcps, AsyncAgentMcps
@@ -133,6 +134,8 @@ class Agents(SyncAPIResource):
         description: Union[str, _NotGiven] = NOT_GIVEN,
         phase_id: Union[int, _NotGiven] = NOT_GIVEN,
         model_id: Union[int, _NotGiven] = NOT_GIVEN,
+        effort: Union[ReasoningEffort, _NotGiven] = NOT_GIVEN,
+        thinking_enabled: Union[bool, _NotGiven] = NOT_GIVEN,
     ) -> AgentCreateResponse:
         """Create a new agent.
 
@@ -143,6 +146,12 @@ class Agents(SyncAPIResource):
             description: Optional description (max 2000 chars).
             phase_id: Required when ``agent_type`` is ``"pentest"`` (1-5).
             model_id: AI model ID.
+            effort: Reasoning-effort override for the agent. One of
+                ``"none"``, ``"minimal"``, ``"low"``, ``"medium"``, ``"high"``,
+                ``"xhigh"``, ``"max"``. Must be supported by the model. When
+                omitted, the agent inherits the model default.
+            thinking_enabled: Whether the agent's thinking/reasoning is on.
+                When omitted, the agent inherits the model default.
 
         Returns:
             Response containing the newly created agent under ``.agent``.
@@ -156,6 +165,8 @@ class Agents(SyncAPIResource):
             "description": description,
             "phase_id": phase_id,
             "model_id": model_id,
+            "effort": effort,
+            "thinking_enabled": thinking_enabled,
         }))
         return self._client.post(_AGENTS, body=body, model=AgentCreateResponse)
 
@@ -169,6 +180,8 @@ class Agents(SyncAPIResource):
         model_id: Union[int, _NotGiven] = NOT_GIVEN,
         agent_type: Union[str, _NotGiven] = NOT_GIVEN,
         phase_id: Union[int, _NotGiven] = NOT_GIVEN,
+        effort: Union[ReasoningEffort, _NotGiven] = NOT_GIVEN,
+        thinking_enabled: Union[bool, _NotGiven] = NOT_GIVEN,
     ) -> AgentUpdateResponse:
         """Update an agent.
 
@@ -183,6 +196,10 @@ class Agents(SyncAPIResource):
             model_id: New AI model ID.
             agent_type: ``"pentest"`` or ``"general"``.
             phase_id: New phase ID (required for pentest agents).
+            effort: Reasoning-effort override for the agent. One of
+                ``"none"``, ``"minimal"``, ``"low"``, ``"medium"``, ``"high"``,
+                ``"xhigh"``, ``"max"``. Must be supported by the model.
+            thinking_enabled: Whether the agent's thinking/reasoning is on.
 
         Returns:
             Response containing the updated agent under ``.agent``.
@@ -194,6 +211,8 @@ class Agents(SyncAPIResource):
             "model_id": model_id,
             "agent_type": agent_type,
             "phase_id": phase_id,
+            "effort": effort,
+            "thinking_enabled": thinking_enabled,
         })
         return self._client.put(f"{_AGENTS}/{agent_id}", body=body, model=AgentUpdateResponse)
 
@@ -287,6 +306,8 @@ class AsyncAgents(AsyncAPIResource):
         description: Union[str, _NotGiven] = NOT_GIVEN,
         phase_id: Union[int, _NotGiven] = NOT_GIVEN,
         model_id: Union[int, _NotGiven] = NOT_GIVEN,
+        effort: Union[ReasoningEffort, _NotGiven] = NOT_GIVEN,
+        thinking_enabled: Union[bool, _NotGiven] = NOT_GIVEN,
     ) -> AgentCreateResponse:
         body: Dict[str, Any] = {
             "name": name,
@@ -297,6 +318,8 @@ class AsyncAgents(AsyncAPIResource):
             "description": description,
             "phase_id": phase_id,
             "model_id": model_id,
+            "effort": effort,
+            "thinking_enabled": thinking_enabled,
         }))
         return await self._client.post(_AGENTS, body=body, model=AgentCreateResponse)
 
@@ -310,6 +333,8 @@ class AsyncAgents(AsyncAPIResource):
         model_id: Union[int, _NotGiven] = NOT_GIVEN,
         agent_type: Union[str, _NotGiven] = NOT_GIVEN,
         phase_id: Union[int, _NotGiven] = NOT_GIVEN,
+        effort: Union[ReasoningEffort, _NotGiven] = NOT_GIVEN,
+        thinking_enabled: Union[bool, _NotGiven] = NOT_GIVEN,
     ) -> AgentUpdateResponse:
         body = strip_not_given({
             "name": name,
@@ -318,6 +343,8 @@ class AsyncAgents(AsyncAPIResource):
             "model_id": model_id,
             "agent_type": agent_type,
             "phase_id": phase_id,
+            "effort": effort,
+            "thinking_enabled": thinking_enabled,
         })
         return await self._client.put(f"{_AGENTS}/{agent_id}", body=body, model=AgentUpdateResponse)
 
