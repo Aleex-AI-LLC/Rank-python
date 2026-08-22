@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import List, Union
 
 from .._base_client import AsyncAPIClient, SyncAPIClient
 from .._utils._transform import NOT_GIVEN, _NotGiven, strip_not_given

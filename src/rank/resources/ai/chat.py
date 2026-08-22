@@ -4,7 +4,6 @@ import json as _json
 import os
 from typing import IO, Any, Dict, List, Literal, Optional, Tuple, Union
 
-from ..._base_client import AsyncAPIClient, SyncAPIClient
 from ..._streaming import AsyncStream, Stream
 from ..._utils._transform import NOT_GIVEN, _NotGiven, strip_not_given
 from ...types.ai import ChatMessage

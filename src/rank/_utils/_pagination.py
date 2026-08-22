@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, List, Optional, TypeVar, Any
+from typing import TYPE_CHECKING, Any, Generic, List, TypeVar
 
 if TYPE_CHECKING:
-    from .._base_client import SyncAPIClient, AsyncAPIClient
+    from .._base_client import AsyncAPIClient, SyncAPIClient
 
 from ..types.shared import PaginationMeta
 

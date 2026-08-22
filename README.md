@@ -16,20 +16,26 @@ Rank lets you run full penetration tests driven by AI agents in minutes. This SD
 - [Running a Pentest (End-to-End)](#running-a-pentest-end-to-end)
   - [1. Create a Chat Session](#1-create-a-chat-session)
   - [2. Create a Pentest](#2-create-a-pentest)
-  - [3. Assign Agents](#3-assign-agents)
-  - [4. Execute — Automatic Mode](#4-execute--automatic-mode)
-  - [5. Execute — Guided Mode (Phase by Phase)](#5-execute--guided-mode-phase-by-phase)
-  - [6. Generate a Report](#6-generate-a-report)
-  - [Cancelling a Running Pentest](#cancelling-a-running-pentest)
+  - [3. Declare and Activate Rules of Engagement](#3-declare-and-activate-rules-of-engagement)
+  - [4. Assign Agents](#4-assign-agents)
+  - [5. Execute — Automatic Mode](#5-execute--automatic-mode)
+  - [6. Execute — Guided Mode (Phase by Phase)](#6-execute--guided-mode-phase-by-phase)
+  - [7. Generate a Report](#7-generate-a-report)
+  - [Stopping a pentest (`cancel` vs `kill`)](#stopping-a-pentest-cancel-vs-kill)
 - [Vulnerability Management](#vulnerability-management)
   - [List and Inspect](#list-and-inspect)
+  - [Taxonomy and Validation](#taxonomy-and-validation)
   - [Status Transitions](#status-transitions)
   - [Assignment](#assignment)
   - [Comments](#comments)
   - [Evidence Files](#evidence-files)
   - [Bulk Operations](#bulk-operations)
   - [Quality Gate](#quality-gate)
-  - [Export and Global Summary](#export-and-global-summary)
+  - [Export, Provenance, and Global Summary](#export-provenance-and-global-summary)
+- [Evidence and Audit](#evidence-and-audit)
+- [Retest](#retest)
+- [Webhooks and Integrations](#webhooks-and-integrations)
+- [Catalogs and Policies](#catalogs-and-policies)
 - [AI Chat](#ai-chat)
 - [Streaming Events Reference](#streaming-events-reference)
 - [Agents](#agents)
@@ -82,7 +88,11 @@ API keys are created from the Rank dashboard under **Settings > API Tokens**. Ea
 
 ## Running a Pentest (End-to-End)
 
-This section walks through the complete lifecycle of a pentest, from creation to report generation. This is the core workflow of Rank.
+This section walks through the complete lifecycle of a pentest, from creation to a sealed report. This is the core workflow of Rank.
+
+**Create outbound integrations before you create and launch pentests.** Tickets and chat notifications fire from live events (`vulnerability.created`, `vulnerability.validated`, …). An integration created after findings already exist does **not** backfill them — use `client.integrations.sync()` for that. See [Webhooks and Integrations](#webhooks-and-integrations).
+
+Without an **active Rules of Engagement** the orchestrator will not start (`no_active_roe`). Create the pentest, activate a RoE that covers its assets, then assign agents and stream.
 
 ### 1. Create a Chat Session
 
@@ -122,6 +132,15 @@ Each pentest must have at least one asset, and exactly one should be marked as `
 |---|---|---|---|
 | `automatic` | OWASP Top 10 (forced, `methodology_id=1`) | All phases run sequentially without intervention | Automatic — handled during the stream |
 | `guided` | You choose — list available methodologies first | You control each phase (1-3) individually | Manual — start `process_vulnerabilities` after the phases, then poll with `wait_for_vulnerabilities` |
+
+Check remaining quota before creating a pentest (`GET /pentests/limits`). Omit `team_id` to use the user's first team, or their personal tier if they have none:
+
+```python
+limits = client.pentests.limits()
+print(limits.context, limits.remaining, limits.is_unlimited)
+
+limits = client.pentests.limits(team_id=4)
+```
 
 #### Automatic mode
 
@@ -181,7 +200,50 @@ pentest = client.pentests.create(
 print(f"Pentest #{pentest.id} created — status: {pentest.status}")
 ```
 
-### 3. Assign Agents
+### 3. Declare and Activate Rules of Engagement
+
+The run is fail-closed: without an **active** RoE the pentest does not start. At least one of `allowed_cidrs` or `allowed_domains` is required, and **every** pentest asset must fall inside that allow-list. A matching deny-list entry always wins.
+
+```python
+# Vocabulary of actions that can wait for a human (optional)
+classes = client.catalogs.list_approval_classes()
+
+roe = client.pentests.roe.create(
+    pentest.id,
+    allowed_domains=["example.com"],
+    allowed_cidrs=["93.184.216.34/32"],
+    denied_cidrs=["10.0.0.0/8"],
+    timezone="Europe/Madrid",
+    max_rps=10,
+    max_concurrency=4,
+    requires_approval_for=["exploit"],  # ids from the catalog
+    auto_approve=False,
+    authorization_ref="ENG-2026-0042",
+    activate=True,  # required for the run to start
+)
+print(roe.status, roe.version)
+
+# PUT merges onto the current version; pass activate=True again to cut over
+client.pentests.roe.update(
+    pentest.id,
+    max_rps=5,
+    activate=True,
+)
+```
+
+If `requires_approval_for` is set, the runtime pauses those actions until you decide:
+
+```python
+pending = client.pentests.approvals.list(pentest.id, status="pending")
+for a in pending.approvals:
+    client.pentests.approvals.decide(
+        pentest.id, a.id,
+        decision="approve",  # or "deny"
+        reason="In scope for this window",
+    )
+```
+
+### 4. Assign Agents
 
 Before executing, you need to assign AI agents to the pentest.
 
@@ -213,7 +275,7 @@ for phase in defaults.items:
     print(f"Phase {phase.phase_id}: {[a.name for a in phase.agents]}")
 ```
 
-### 4. Execute — Automatic Mode
+### 5. Execute — Automatic Mode
 
 Launch the pentest and stream the real-time output. In automatic mode, the agents run all phases sequentially and process vulnerabilities at the end — all within a single stream:
 
@@ -277,7 +339,7 @@ result = client.pentests.finish(pentest.id)
 print(result.message)
 ```
 
-### 5. Execute — Guided Mode (Phase by Phase)
+### 6. Execute — Guided Mode (Phase by Phase)
 
 In guided mode, you execute one phase at a time. Between phases you can review results, reassign agents, or stop early.
 
@@ -370,9 +432,9 @@ if result.vulnerabilities:
 
 > **Tip:** You don't have to run all 3 phases. You can stop after any phase, process vulnerabilities, and finish the pentest.
 
-### 6. Generate a Report
+### 7. Generate a Report
 
-Generate a PDF report and send it by email. The pentest must be completed.
+Generate a report, seal it, and email the PDF. The pentest must be completed (status_code 5). Override the tenant profile for this emission with `formats` and `audience`.
 
 ```python
 result = client.pentests.generate_report(
@@ -382,17 +444,43 @@ result = client.pentests.generate_report(
     subject="Pentest Report — example.com",
     cc_emails=["cto@example.com", "devops@example.com"],
     extended=1,  # 0 = summary, 1 = full report with evidence
+    formats=["pdf", "html", "json"],  # pdf | html | markdown | docx | json
+    audience="technical",              # executive | technical | attestation
 )
-print(result.message)
+print(result.message, result.sealed, result.emailed)
+
+# Sealed files are listed separately (signed URL, never inline)
+reports = client.pentests.reports.list(pentest.id)
+for r in reports.items:
+    print(r.format, r.payload_sha256, r.sealed_at)
+download = client.pentests.reports.retrieve(pentest.id, reports.items[0].id)
+print(download.url)
 ```
 
-### Cancelling a Running Pentest
-
-Cancel a pentest that is currently executing:
+SARIF (and DefectDojo / CSV) are **vulnerability exports**, not issued-report formats:
 
 ```python
+sarif = client.pentests.vulnerabilities.export(pentest.id, format="sarif")
+open("findings.sarif", "wb").write(sarif.content)
+```
+
+### Stopping a pentest (`cancel` vs `kill`)
+
+| | `cancel` | `kill` |
+|---|---|---|
+| Backend | Go orchestrator | PHP kill switch |
+| Effect | Asks a **running stream** to stop | Terminal halt; evidence is preserved |
+| Typical use | Operator Ctrl+C, disconnect | Emergency stop / out of scope |
+| Event | `pentest.cancelled` | `pentest.killed` (+ `control.kill_*`) |
+
+```python
+# Soft stop of a running stream
 result = client.pentests.cancel(pentest.id)
 print(result.message)  # "Pentest cancelled successfully"
+
+# Kill switch (terminal)
+killed = client.pentests.kill(pentest.id, reason="Out of authorized window")
+print(killed.kill_requested, killed.reason)
 ```
 
 You can also reconnect to the SSE stream of a running pentest:
@@ -413,24 +501,49 @@ Vulnerabilities are nested under pentests and offer a rich set of operations for
 # List vulnerabilities (paginated, filterable by severity)
 vulns = client.pentests.vulnerabilities.list(pentest.id, severity="critical")
 for v in vulns.items:
-    print(f"[{v.severity}] {v.vulnerability} — {v.status}")
+    print(f"[{v.severity}] {v.vulnerability} — {v.status}  "
+          f"cwe={v.cwe_id} validation={v.validation_status}")
 
-# Get full details
+# Get full details (taxonomy, SLA, provenance fields)
 vuln = client.pentests.vulnerabilities.retrieve(pentest.id, vulnerability_id=42)
-print(vuln.description)
-print(vuln.resolution)
+print(vuln.cvss_vector, vuln.cwe_id, vuln.validation_status, vuln.due_date)
 
-# Update fields
+# Update text and taxonomy. epss_score / cisa_kev are published signals
+# and cannot be written. due_date is computed from the remediation policy.
 client.pentests.vulnerabilities.update(
     pentest.id, 42,
     severity="high",
     priority="urgent",
-    due_date="2026-04-15",
+    cwe_id="CWE-89",
+    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    severity_override_reason="Business impact exceeds the CVSS rating",
 )
 
 # Get aggregated statistics
 summary = client.pentests.vulnerabilities.summary(pentest.id)
 print(summary)
+```
+
+Validation statuses: `unvalidated | validated | failed | needs_manual_review | not_validatable | legacy`.
+
+### Taxonomy and Validation
+
+```python
+# Human review of a finding the validator left inconclusive
+client.pentests.vulnerabilities.review(
+    pentest.id, 42,
+    validation_status="validated",  # or "failed"
+    reason="Reproduced against staging with the same payload",
+)
+
+# Where the finding came from, and whether its evidence digest still matches
+prov = client.pentests.vulnerabilities.provenance(pentest.id, 42)
+print(prov.evidence_intact, prov.origin)
+
+# False-positive rates by CWE across all pentests you can see
+metrics = client.pentests.vulnerabilities.validation_metrics()
+for row in metrics.by_class:
+    print(row.cwe_id, row.validated, row.failed, row.automated_fp_rate)
 ```
 
 ### Status Transitions
@@ -499,13 +612,15 @@ client.pentests.vulnerabilities.unassign(pentest.id, 42)
 # List comments
 comments = client.pentests.vulnerabilities.list_comments(pentest.id, 42)
 for c in comments.items:
-    print(f"{c.user.username}: {c.comment}")
+    author = c.username or (f"user#{c.user_id}" if c.user_id else "system")
+    print(f"{author}: {c.comment}")
 
 # Add a comment
-client.pentests.vulnerabilities.add_comment(
+created = client.pentests.vulnerabilities.add_comment(
     pentest.id, 42,
     comment="Confirmed exploitable in staging environment",
 )
+print(created.comment_id)
 
 # Edit a comment (only the author can edit)
 client.pentests.vulnerabilities.update_comment(
@@ -534,8 +649,8 @@ client.pentests.vulnerabilities.upload_evidence_files(
 
 # List evidence files
 evidence = client.pentests.vulnerabilities.list_evidence_files(pentest.id, 42)
-for f in evidence.items:
-    print(f.filename, f.file_url)
+for f in evidence.files:
+    print(f.file_name, f.download_url)
 
 # Get a single file with download URL
 file_info = client.pentests.vulnerabilities.get_evidence_file(pentest.id, 42, file_id=5)
@@ -555,7 +670,7 @@ result = client.pentests.vulnerabilities.bulk_update_status(
     status="in_progress",
     comment="Batch triage — assigning to security team",
 )
-print(f"Updated: {result.updated_count}, Failed: {result.failed_count}")
+print(f"Updated: {result.updated}, Skipped: {result.skipped}")
 ```
 
 ### Quality Gate
@@ -571,6 +686,10 @@ result = client.pentests.vulnerabilities.quality_gate(
         {"severity": "high", "max_open": 5},
         {"min_resolution_rate": 0.8},
         {"max_overdue": 0},
+        {"min_verified_resolution_rate": 0.8},
+        {"max_unverified_resolved": 0},
+        {"max_regressed": 0},
+        {"max_pending_retests": 0},
     ],
 )
 print(f"Passed: {result.passed}")
@@ -581,14 +700,19 @@ global_qg = client.pentests.quality_gate(
     max_open_high=5,
     min_resolution_rate=80.0,
 )
-print(f"Overall: {'PASS' if global_qg.passed else 'FAIL'}")
+print(f"Overall: {'PASS' if global_qg.overall_passed else 'FAIL'}")
 ```
 
-### Export and Global Summary
+### Export, Provenance, and Global Summary
 
 ```python
-# Export vulnerabilities as JSON
-export = client.pentests.vulnerabilities.export(pentest.id)
+# JSON envelope
+export = client.pentests.vulnerabilities.export(pentest.id, format="json")
+
+# Documents meant for another tool (raw bytes)
+sarif = client.pentests.vulnerabilities.export(pentest.id, format="sarif")
+csv_file = client.pentests.vulnerabilities.export(pentest.id, format="csv")
+dd = client.pentests.vulnerabilities.export(pentest.id, format="defectdojo")
 
 # Get original operation evidence for a vulnerability
 evidence = client.pentests.vulnerabilities.evidence(pentest.id, 42)
@@ -596,10 +720,132 @@ evidence = client.pentests.vulnerabilities.evidence(pentest.id, 42)
 # View change history
 history = client.pentests.vulnerabilities.history(pentest.id, 42)
 for entry in history.items:
-    print(f"{entry.created_at}: {entry.action}")
+    print(f"{entry.created_at}: {entry.old_status} → {entry.new_status}")
 
 # Global summary across all pentests
 global_summary = client.pentests.vulnerabilities.global_summary()
+```
+
+## Evidence and Audit
+
+`client.pentests.evidences()` is the **narrative** dump of operations. Sealed artifacts live under `client.pentests.evidence`.
+
+```python
+# Sealed artifacts (optional filter by finding)
+artifacts = client.pentests.evidence.list(pentest.id, vulnerability_id=42)
+one = client.pentests.evidence.retrieve(pentest.id, artifacts.items[0].id)
+print(one.url)  # time-limited; never inline for large files
+
+# Signed manifest (404 until the run is sealed)
+manifest = client.pentests.manifest(pentest.id)
+print(manifest.merkle_root, manifest.signature_valid)
+
+# Hashed control-event trail
+chain = client.pentests.audit_chain(pentest.id, event_type="kill_requested")
+print(client.pentests.verify_audit_chain(pentest.id).intact)
+
+# How long artifacts are kept (omit team_id for personal policy)
+policy = client.evidence.get_retention_policy()
+client.evidence.set_retention_policy(retention_days=365, credential_retention_days=30)
+```
+
+## Retest
+
+Retest results: `pending | fixed | still_vulnerable | inconclusive | skipped`. Auth context (`cookies` / `headers`) is accepted on enqueue and **never** returned.
+
+```python
+# One finding (409 if a run is already in flight)
+run = client.pentests.vulnerabilities.retest(pentest.id, 42)
+
+# Every eligible resolved finding on the pentest
+batch = client.pentests.retest(pentest.id)
+
+# Compact list, then detail (findings + replay evidence)
+runs = client.pentests.retests.list(pentest.id)
+detail = client.pentests.retests.retrieve(pentest.id, runs.items[0].id)
+client.pentests.retests.cancel(pentest.id, runs.items[0].id)  # only while queued
+```
+
+## Webhooks and Integrations
+
+Tenant webhooks (`client.webhooks`) fire for **every** pentest of their owner. Per-pentest subscriptions remain at `client.pentests.webhooks`.
+
+**Create integrations before you create and launch pentests.** Connecting Jira/GitHub/Slack after findings already exist does not open tickets for those events — they already fired. Call `sync` to push a pentest after the fact; later events (including a conclusive retest) do arrive on their own.
+
+```python
+# Tenant webhook — secret is returned once
+hook = client.webhooks.create(
+    url="https://example.com/rank/hooks",
+    events=["vulnerability.validated", "pentest.killed", "control.approval_requested"],
+    description="SOC inbox",
+)
+print(hook.secret)
+
+client.webhooks.test(hook.webhook.id)
+```
+
+Verify deliveries with HMAC-SHA256 of `{timestamp}.{raw_body}` (`v1=`, 5-minute window):
+
+```python
+import rank
+
+payload = request_body_bytes  # raw body, do not re-serialize JSON
+headers = request_headers     # must include X-Rank-Signature and X-Rank-Timestamp
+rank.verify_signature(payload, headers, secret="whsec_...")
+```
+
+Event catalog (subscribe by these names):
+
+| Subject | Events |
+|---|---|
+| Finding | `vulnerability.created`, `vulnerability.validated`, `vulnerability.validation_failed`, `vulnerability.status_changed`, `vulnerability.assigned`, `vulnerability.resolved`, `vulnerability.reopened`, `vulnerability.retested`, `vulnerability.retest_sla_breached`, `vulnerability.regression_detected`, `vulnerability.commented`, `vulnerability.sla_breached` |
+| Pentest | `pentest.started`, `pentest.phase_completed`, `pentest.completed`, `pentest.failed`, `pentest.cancelled`, `pentest.killed`, `pentest.report_sent` |
+| Control | `control.scope_violation`, `control.kill_requested`, `control.kill_confirmed`, `control.approval_requested`, `control.approval_decided`, `control.roe_activated`, `control.roe_validation_failed`, `control.window_warning` |
+| Health | `ping` |
+
+```python
+# Providers available today: jira, github, slack
+providers = client.integrations.providers()
+
+# Create BEFORE launching pentests so new findings open tickets
+integ = client.integrations.create(
+    provider="jira",
+    name="SecOps Jira",
+    credentials={"email": "bot@example.com", "api_token": "..."},
+    config={"project_key": "SEC"},
+    events=["vulnerability.validated"],
+    sync_inbound=True,
+)
+client.integrations.test(integ.integration.id)
+
+# Backfill a pentest that already has findings
+client.integrations.sync(integ.integration.id, pentest_id=pentest.id)
+client.integrations.links(integ.integration.id)
+```
+
+## Catalogs and Policies
+
+```python
+cwes = client.catalogs.list_cwe(q="injection", mapping="allowed")
+tech = client.catalogs.retrieve_attack_technique("T1190")
+fields = client.catalogs.list_report_profile_fields()
+
+profile = client.report_profiles.retrieve()
+client.report_profiles.update(audience="technical", default_formats=["pdf", "html"])
+
+policy = client.remediation_policy.retrieve()
+client.remediation_policy.update(
+    sla_hours={"critical": 24, "high": 72},
+    auto_retest_on_resolve=True,
+    auto_retest_on_ticket_close=True,
+)
+
+# Team overrides (owner only)
+client.teams.report_profiles.update(team.id, audience="executive")
+client.teams.remediation_policy.update(team.id, retest_sla_hours=48)
+
+# Pin a pentest to a profile (or None for the tenant default)
+client.pentests.report_settings.update(pentest.id, report_profile_id=profile.profile.id)
 ```
 
 ## AI Chat
@@ -1143,6 +1389,10 @@ team_agents = client.teams.agents.list(team.id)
 
 # Team pentests
 pentests = client.teams.pentests(team.id)
+
+# Team default report shape and remediation policy (owner only)
+client.teams.report_profiles.retrieve(team.id)
+client.teams.remediation_policy.retrieve(team.id)
 ```
 
 ### Usage and Ownership
@@ -1220,6 +1470,11 @@ client.chats.unshare_all(chat_id=1)
 ops = client.chats.operations.list(chat_id=1)
 client.chats.operations.assign(chat_id=1, operations=[...])
 client.chats.operations.delete(chat_id=1, operation_id=10)
+
+# Vulnerabilities linked to the chat (the pentest still owns the findings)
+client.chats.vulnerabilities.assign(chat_id=1, vulnerabilities=[42, 43])
+vulns = client.chats.vulnerabilities.list(chat_id=1)
+client.chats.vulnerabilities.delete(chat_id=1, vulnerability_id=42)
 
 # Operation logs
 logs = client.chats.operation_logs.list()
@@ -1307,7 +1562,8 @@ RankError
 │   ├── RateLimitError (429)
 │   └── InternalServerError (5xx)
 ├── APIConnectionError
-└── APITimeoutError
+├── APITimeoutError
+└── SignatureVerificationError
 ```
 
 ## Async Usage

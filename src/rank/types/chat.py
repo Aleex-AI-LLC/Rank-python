@@ -6,7 +6,6 @@ from pydantic import model_validator
 
 from .shared import PaginationInfo, RankModel
 
-
 # ---------------------------------------------------------------------------
 # Chat
 # ---------------------------------------------------------------------------
@@ -137,6 +136,72 @@ class AssignOperationsResponse(RankModel):
 
 
 # ---------------------------------------------------------------------------
+# Vulnerabilities
+# ---------------------------------------------------------------------------
+
+
+class ChatVulnerability(RankModel):
+    """A vulnerability linked to a chat (``chat_has_vulns`` join).
+
+    PHP returns ``vulnerability`` as the finding title and
+    ``vulnerability_id`` as the pentest finding id.  Aliases ``title`` /
+    ``id`` are filled in so both forms work.
+    """
+
+    relation_id: Optional[int] = None
+    chat_id: Optional[int] = None
+    vulnerability_id: Optional[int] = None
+    vulnerability: Optional[str] = None
+    description: Optional[str] = None
+    severity: Optional[str] = None
+    resolution: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    created_at: Optional[str] = None
+    # Convenience aliases
+    id: Optional[int] = None
+    title: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_aliases(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        if data.get("id") is None and data.get("vulnerability_id") is not None:
+            data["id"] = data["vulnerability_id"]
+        if data.get("title") is None and data.get("vulnerability") is not None:
+            data["title"] = data["vulnerability"]
+        return data
+
+
+class ChatVulnerabilityListResponse(RankModel):
+    """Paginated list from ``GET /chats/{id}/vulnerabilities``."""
+
+    items: List[ChatVulnerability] = []
+    pagination: Optional[PaginationInfo] = None
+
+
+class AssignVulnerabilitiesResponse(RankModel):
+    """Response from ``POST /chats/{id}/vulnerabilities``."""
+
+    message: str = ""
+    chat_id: Optional[int] = None
+    assigned_vulnerabilities: List[int] = []
+    total_vulnerabilities: Optional[int] = None
+
+
+class RemoveVulnerabilityResponse(RankModel):
+    """Response from ``DELETE /chats/{id}/vulnerabilities/{vulnId}``.
+
+    Only the chat link is removed; the pentest finding is preserved.
+    """
+
+    message: str = ""
+    chat_id: Optional[int] = None
+    vulnerability_id: Optional[int] = None
+
+
+# ---------------------------------------------------------------------------
 # Share
 # ---------------------------------------------------------------------------
 
@@ -179,6 +244,11 @@ __all__ = [
     "ChatOperation",
     "ChatOperationListResponse",
     "AssignOperationsResponse",
+    # Vulnerabilities
+    "ChatVulnerability",
+    "ChatVulnerabilityListResponse",
+    "AssignVulnerabilitiesResponse",
+    "RemoveVulnerabilityResponse",
     # Share
     "ChatShareResponse",
     "ChatUnshareResponse",

@@ -10,7 +10,6 @@ from ...types.agent import (
 )
 from .._base import AsyncAPIResource, SyncAPIResource
 
-
 # ---------------------------------------------------------------------------
 # AgentTools (sync)
 # ---------------------------------------------------------------------------

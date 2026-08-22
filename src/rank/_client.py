@@ -18,14 +18,21 @@ from .resources.agents import Agents, AsyncAgents
 from .resources.ai import AI, AsyncAI
 from .resources.auth import AsyncAuth, Auth
 from .resources.billing import AsyncBilling, Billing
+from .resources.catalogs import AsyncCatalogs, Catalogs
 from .resources.chats import AsyncChats, Chats
+from .resources.evidence import AsyncEvidenceRetention, EvidenceRetention
+from .resources.integrations import AsyncIntegrations, Integrations
 from .resources.invitations import AsyncUserInvitations, UserInvitations
 from .resources.pentests import AsyncPentests, Pentests
 from .resources.permissions import AsyncPermissions, Permissions
+from .resources.remediation_policy import AsyncRemediationPolicies, RemediationPolicies
+from .resources.report_profiles import AsyncReportProfiles, ReportProfiles
 from .resources.teams import AsyncTeams, Teams
 from .resources.tickets import AsyncTickets, Tickets
 from .resources.tiers import AsyncTiers, Tiers
 from .resources.usage import AsyncUsage, Usage
+from .resources.webhooks import AsyncWebhooks as AsyncTenantWebhooks
+from .resources.webhooks import Webhooks as TenantWebhooks
 
 
 class Rank:
@@ -58,6 +65,12 @@ class Rank:
     tickets: Tickets
     usage: Usage
     billing: Billing
+    catalogs: Catalogs
+    webhooks: TenantWebhooks
+    integrations: Integrations
+    report_profiles: ReportProfiles
+    remediation_policy: RemediationPolicies
+    evidence: EvidenceRetention
 
     def __init__(
         self,
@@ -111,6 +124,12 @@ class Rank:
         self.tickets = Tickets(self._api_client)
         self.usage = Usage(self._api_client)
         self.billing = Billing(self._api_client)
+        self.catalogs = Catalogs(self._api_client)
+        self.webhooks = TenantWebhooks(self._api_client)
+        self.integrations = Integrations(self._api_client)
+        self.report_profiles = ReportProfiles(self._api_client)
+        self.remediation_policy = RemediationPolicies(self._api_client)
+        self.evidence = EvidenceRetention(self._api_client)
 
     @property
     def api_client(self) -> SyncAPIClient:
@@ -167,6 +186,12 @@ class AsyncRank:
     tickets: AsyncTickets
     usage: AsyncUsage
     billing: AsyncBilling
+    catalogs: AsyncCatalogs
+    webhooks: AsyncTenantWebhooks
+    integrations: AsyncIntegrations
+    report_profiles: AsyncReportProfiles
+    remediation_policy: AsyncRemediationPolicies
+    evidence: AsyncEvidenceRetention
 
     def __init__(
         self,
@@ -220,6 +245,12 @@ class AsyncRank:
         self.tickets = AsyncTickets(self._api_client)
         self.usage = AsyncUsage(self._api_client)
         self.billing = AsyncBilling(self._api_client)
+        self.catalogs = AsyncCatalogs(self._api_client)
+        self.webhooks = AsyncTenantWebhooks(self._api_client)
+        self.integrations = AsyncIntegrations(self._api_client)
+        self.report_profiles = AsyncReportProfiles(self._api_client)
+        self.remediation_policy = AsyncRemediationPolicies(self._api_client)
+        self.evidence = AsyncEvidenceRetention(self._api_client)
 
     @property
     def api_client(self) -> AsyncAPIClient:

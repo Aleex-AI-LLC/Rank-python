@@ -5,7 +5,6 @@ from typing import List
 from ...types.agent import AgentMcpListResponse, AssignMcpsResponse, RemoveMcpResponse
 from .._base import AsyncAPIResource, SyncAPIResource
 
-
 # ---------------------------------------------------------------------------
 # AgentMcps (sync)
 # ---------------------------------------------------------------------------

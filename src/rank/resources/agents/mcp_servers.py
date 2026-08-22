@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Union
 
 from ..._utils._transform import NOT_GIVEN, _NotGiven, strip_not_given
 from ...types.mcp_server import (

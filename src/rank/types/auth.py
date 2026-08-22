@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional
 
 from .shared import MessageResponse, PaginationInfo, Permission, RankModel
 
-
 # ---------------------------------------------------------------------------
 # Tier / Trial / Subscription (nested in User)
 # ---------------------------------------------------------------------------

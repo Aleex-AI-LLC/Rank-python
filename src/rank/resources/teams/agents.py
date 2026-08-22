@@ -11,7 +11,6 @@ from ...types.team import (
 )
 from .._base import AsyncAPIResource, SyncAPIResource
 
-
 # ---------------------------------------------------------------------------
 # TeamAgents (sync)
 # ---------------------------------------------------------------------------

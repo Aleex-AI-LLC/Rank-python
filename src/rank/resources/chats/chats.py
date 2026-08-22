@@ -17,6 +17,7 @@ from ...types.shared import MessageResponse
 from .._base import AsyncAPIResource, SyncAPIResource
 from .operation_logs import AsyncOperationLogs, OperationLogs
 from .operations import AsyncOperations, Operations
+from .vulnerabilities import AsyncVulnerabilities, Vulnerabilities
 
 _CHATS = "/chats"
 
@@ -47,15 +48,20 @@ class Chats(SyncAPIResource):
 
         # List operations (message history)
         ops = client.chats.operations.list(chat_id=chat.id)
+
+        # Link pentest findings to the chat
+        client.chats.vulnerabilities.assign(chat_id=chat.id, vulnerabilities=[42])
     """
 
     operations: Operations
     operation_logs: OperationLogs
+    vulnerabilities: Vulnerabilities
 
     def __init__(self, client: SyncAPIClient) -> None:
         super().__init__(client)
         self.operations = Operations(client)
         self.operation_logs = OperationLogs(client)
+        self.vulnerabilities = Vulnerabilities(client)
 
     # -- CRUD ---------------------------------------------------------------
 
@@ -238,11 +244,13 @@ class AsyncChats(AsyncAPIResource):
 
     operations: AsyncOperations
     operation_logs: AsyncOperationLogs
+    vulnerabilities: AsyncVulnerabilities
 
     def __init__(self, client: AsyncAPIClient) -> None:
         super().__init__(client)
         self.operations = AsyncOperations(client)
         self.operation_logs = AsyncOperationLogs(client)
+        self.vulnerabilities = AsyncVulnerabilities(client)
 
     # -- CRUD ---------------------------------------------------------------
 

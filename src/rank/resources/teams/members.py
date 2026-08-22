@@ -7,7 +7,6 @@ from ...types.shared import MessageResponse
 from ...types.team import MemberListResponse, TeamRole
 from .._base import AsyncAPIResource, SyncAPIResource
 
-
 # ---------------------------------------------------------------------------
 # Members (sync)
 # ---------------------------------------------------------------------------

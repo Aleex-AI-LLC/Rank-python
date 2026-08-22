@@ -7,7 +7,6 @@ from ...types.shared import MessageResponse
 from ...types.team import InvitationCreateResponse, InvitationListResponse
 from .._base import AsyncAPIResource, SyncAPIResource
 
-
 # ---------------------------------------------------------------------------
 # Invitations (sync)
 # ---------------------------------------------------------------------------

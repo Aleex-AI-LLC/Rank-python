@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from .shared import RankModel
-
 
 # ---------------------------------------------------------------------------
 # Chat name generation
