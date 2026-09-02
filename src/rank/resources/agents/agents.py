@@ -15,8 +15,8 @@ from ...types.agent import (
 )
 from ...types.shared import ReasoningEffort
 from .._base import AsyncAPIResource, SyncAPIResource
-from .mcp_servers import AsyncMcpServers, McpServers
 from .agent_mcps import AgentMcps, AsyncAgentMcps
+from .mcp_servers import AsyncMcpServers, McpServers
 from .models import AIModels, AsyncAIModels
 from .tools import AgentTools, AsyncAgentTools
 

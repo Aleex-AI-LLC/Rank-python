@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import platform
 
-PACKAGE_VERSION = "0.1.4"
+PACKAGE_VERSION = "0.2.0"
 
 BASE_URL = "https://api.aleex-rank.ai"
 AGENT_BASE_URL = "https://aleex.aleex-rank.ai"

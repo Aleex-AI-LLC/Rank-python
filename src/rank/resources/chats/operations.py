@@ -7,7 +7,6 @@ from ...types.chat import AssignOperationsResponse, ChatOperationListResponse
 from ...types.shared import MessageResponse
 from .._base import AsyncAPIResource, SyncAPIResource
 
-
 # ---------------------------------------------------------------------------
 # Operations (sync)
 # ---------------------------------------------------------------------------

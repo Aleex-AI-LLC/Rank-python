@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 from .agents import (
-    AIModels,
     AgentMcps,
-    AgentTools,
     Agents,
-    AsyncAIModels,
+    AgentTools,
+    AIModels,
     AsyncAgentMcps,
-    AsyncAgentTools,
     AsyncAgents,
+    AsyncAgentTools,
+    AsyncAIModels,
     AsyncMcpServers,
     McpServers,
 )
 from .ai import AI, AsyncAI
 from .ai import AsyncChat as AsyncAIChat
 from .ai import Chat as AIChat
-from .auth import AsyncApiTokens, AsyncAuth, ApiTokens, Auth
+from .auth import ApiTokens, AsyncApiTokens, AsyncAuth, Auth
 from .billing import AsyncBilling, Billing
+from .catalogs import AsyncCatalogs, Catalogs
 from .chats import (
     AsyncChats,
     AsyncOperationLogs,
@@ -25,6 +26,8 @@ from .chats import (
     OperationLogs,
     Operations,
 )
+from .evidence import AsyncEvidenceRetention, EvidenceRetention
+from .integrations import AsyncIntegrations, Integrations
 from .invitations import AsyncUserInvitations, UserInvitations
 from .pentests import (
     Assets,
@@ -47,6 +50,8 @@ from .pentests import (
     Webhooks,
 )
 from .permissions import AsyncPermissions, Permissions
+from .remediation_policy import AsyncRemediationPolicies, RemediationPolicies
+from .report_profiles import AsyncReportProfiles, ReportProfiles
 from .teams import (
     AsyncInvitations,
     AsyncMembers,
@@ -64,6 +69,8 @@ from .teams import (
 from .tickets import AsyncTickets, Tickets
 from .tiers import AsyncTiers, Tiers
 from .usage import AsyncUsage, Usage
+from .webhooks import AsyncWebhooks as AsyncTenantWebhooks
+from .webhooks import Webhooks as TenantWebhooks
 
 __all__ = [
     "AI",
@@ -132,4 +139,16 @@ __all__ = [
     "AsyncTiers",
     "Usage",
     "AsyncUsage",
+    "Catalogs",
+    "AsyncCatalogs",
+    "TenantWebhooks",
+    "AsyncTenantWebhooks",
+    "Integrations",
+    "AsyncIntegrations",
+    "ReportProfiles",
+    "AsyncReportProfiles",
+    "RemediationPolicies",
+    "AsyncRemediationPolicies",
+    "EvidenceRetention",
+    "AsyncEvidenceRetention",
 ]

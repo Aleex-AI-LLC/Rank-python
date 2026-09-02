@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Optional, AsyncIterator, Union
+from typing import Any, AsyncIterator, Iterator, Optional, Union
 
 import httpx
-
 
 # ---------------------------------------------------------------------------
 # AgentEvent — typed payload for type="agent_event" SSE messages

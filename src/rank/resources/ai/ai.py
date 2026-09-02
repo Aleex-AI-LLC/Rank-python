@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Union
 
 from ..._base_client import AsyncAPIClient, SyncAPIClient
-from ..._utils._transform import NOT_GIVEN, _NotGiven, strip_not_given
 from ...types.ai import ChatMessage, ChatNameResponse
 from .._base import AsyncAPIResource, SyncAPIResource
 from .chat import AsyncChat, Chat

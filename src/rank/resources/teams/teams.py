@@ -11,6 +11,8 @@ from .._base import AsyncAPIResource, SyncAPIResource
 from .agents import AsyncTeamAgents, TeamAgents
 from .invitations import AsyncInvitations, Invitations
 from .members import AsyncMembers, Members
+from .remediation_policy import AsyncTeamRemediationPolicy, TeamRemediationPolicy
+from .report_profiles import AsyncTeamReportProfiles, TeamReportProfiles
 from .roles import AsyncRoles, Roles
 from .usage import AsyncTeamUsage, TeamUsage
 
@@ -49,6 +51,8 @@ class Teams(SyncAPIResource):
     invitations: Invitations
     agents: TeamAgents
     usage: TeamUsage
+    report_profiles: TeamReportProfiles
+    remediation_policy: TeamRemediationPolicy
 
     def __init__(self, client: SyncAPIClient) -> None:
         super().__init__(client)
@@ -57,6 +61,8 @@ class Teams(SyncAPIResource):
         self.invitations = Invitations(client)
         self.agents = TeamAgents(client)
         self.usage = TeamUsage(client)
+        self.report_profiles = TeamReportProfiles(client)
+        self.remediation_policy = TeamRemediationPolicy(client)
 
     # -- CRUD ---------------------------------------------------------------
 
@@ -216,6 +222,8 @@ class AsyncTeams(AsyncAPIResource):
     invitations: AsyncInvitations
     agents: AsyncTeamAgents
     usage: AsyncTeamUsage
+    report_profiles: AsyncTeamReportProfiles
+    remediation_policy: AsyncTeamRemediationPolicy
 
     def __init__(self, client: AsyncAPIClient) -> None:
         super().__init__(client)
@@ -224,6 +232,8 @@ class AsyncTeams(AsyncAPIResource):
         self.invitations = AsyncInvitations(client)
         self.agents = AsyncTeamAgents(client)
         self.usage = AsyncTeamUsage(client)
+        self.report_profiles = AsyncTeamReportProfiles(client)
+        self.remediation_policy = AsyncTeamRemediationPolicy(client)
 
     # -- CRUD ---------------------------------------------------------------
 

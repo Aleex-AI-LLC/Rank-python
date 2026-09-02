@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Generic, List, Optional, Type, TypeVar
+from typing import Generic, List, Type, TypeVar
 
 import httpx
-from pydantic import BaseModel
 
 T = TypeVar("T")
 

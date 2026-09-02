@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import time
 import logging
+import time
 from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar, Union, overload
 
 import httpx
@@ -15,7 +15,6 @@ from ._constants import (
 )
 from ._exceptions import (
     APIConnectionError,
-    APIError,
     APITimeoutError,
     _make_status_error,
 )
@@ -296,17 +295,18 @@ class SyncAPIClient(_BaseClient):
         return response.json()
 
     @overload
-    def put(self, path: str, *, body: Optional[Dict[str, Any]] = ..., model: Type[T]) -> T: ...
+    def put(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., model: Type[T]) -> T: ...
     @overload
-    def put(self, path: str, *, body: Optional[Dict[str, Any]] = ..., model: None = ...) -> Dict[str, Any]: ...
+    def put(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., model: None = ...) -> Dict[str, Any]: ...
     def put(
         self,
         path: str,
         *,
         body: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
         model: Optional[Type[T]] = None,
     ) -> Union[T, Dict[str, Any]]:
-        response = self._request("PUT", path, body=body)
+        response = self._request("PUT", path, body=body, params=params)
         if model is not None:
             return parse_response(response=response, model=model)
         return response.json()
@@ -560,17 +560,18 @@ class AsyncAPIClient(_BaseClient):
         return response.json()
 
     @overload
-    async def put(self, path: str, *, body: Optional[Dict[str, Any]] = ..., model: Type[T]) -> T: ...
+    async def put(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., model: Type[T]) -> T: ...
     @overload
-    async def put(self, path: str, *, body: Optional[Dict[str, Any]] = ..., model: None = ...) -> Dict[str, Any]: ...
+    async def put(self, path: str, *, body: Optional[Dict[str, Any]] = ..., params: Optional[Dict[str, Any]] = ..., model: None = ...) -> Dict[str, Any]: ...
     async def put(
         self,
         path: str,
         *,
         body: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
         model: Optional[Type[T]] = None,
     ) -> Union[T, Dict[str, Any]]:
-        response = await self._request("PUT", path, body=body)
+        response = await self._request("PUT", path, body=body, params=params)
         if model is not None:
             return parse_response(response=response, model=model)
         return response.json()

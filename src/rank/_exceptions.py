@@ -105,6 +105,10 @@ class APITimeoutError(APIConnectionError):
         super().__init__("Request timed out", request=request)
 
 
+class SignatureVerificationError(RankError):
+    """Raised when a Rank webhook signature cannot be verified."""
+
+
 def _make_status_error(
     *,
     message: str,

@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from .ai import (
-    ChatMessage,
-    ChatNameResponse,
-)
 from .agent import (
     Agent,
     AgentCloneResponse,
@@ -22,6 +18,10 @@ from .agent import (
     RemoveMcpResponse,
     RemoveToolResponse,
     TeamAgentGroup,
+)
+from .ai import (
+    ChatMessage,
+    ChatNameResponse,
 )
 from .auth import (
     ApiToken,
@@ -54,8 +54,22 @@ from .billing import (
     BillingSubscription,
     BillingTrialStatusResponse,
 )
+from .catalog import (
+    ApprovalClass,
+    ApprovalClassListResponse,
+    AttackTechnique,
+    AttackTechniqueListResponse,
+    CatalogField,
+    CatalogFieldOption,
+    CweEntry,
+    CweListResponse,
+    ReportProfileFieldsResponse,
+    ValidationMetricsClass,
+    ValidationMetricsResponse,
+)
 from .chat import (
     AssignOperationsResponse,
+    AssignVulnerabilitiesResponse,
     Chat,
     ChatArchiveResponse,
     ChatListResponse,
@@ -65,6 +79,41 @@ from .chat import (
     ChatSharedResponse,
     ChatShareResponse,
     ChatUnshareResponse,
+    ChatVulnerability,
+    ChatVulnerabilityListResponse,
+    RemoveVulnerabilityResponse,
+)
+from .control import (
+    Approval,
+    ApprovalListResponse,
+    EngagementRoe,
+    EscalationContact,
+    KillResponse,
+    RoeResponse,
+    RoeTimeWindow,
+    RoeVersionSummary,
+)
+from .evidence import (
+    AuditChainResponse,
+    AuditChainVerifyResponse,
+    EvidenceArtifact,
+    EvidenceArtifactDetail,
+    EvidenceArtifactListResponse,
+    EvidenceManifest,
+    FindingProvenance,
+    RetentionPolicy,
+)
+from .integration import (
+    Integration,
+    IntegrationCreateResponse,
+    IntegrationLink,
+    IntegrationLinkListResponse,
+    IntegrationListResponse,
+    IntegrationProvider,
+    IntegrationProviderListResponse,
+    IntegrationShowResponse,
+    IntegrationSyncResult,
+    IntegrationTestResponse,
 )
 from .mcp_server import (
     McpServer,
@@ -114,21 +163,21 @@ from .pentest import (
     PentestComment,
     PentestCommentCreateResponse,
     PentestCommentListResponse,
+    Pentester,
     PentestFinishResponse,
+    PentestLimits,
     PentestListResponse,
     PentestTeam,
-    Pentester,
     Phase,
     PhaseListResponse,
-    ProcessVulnerabilitiesResponse,
     ProcessedVulnerability,
+    ProcessVulnerabilitiesResponse,
     QualityGateFailure,
     QualityGatePentestResult,
     QualityGateResponse,
+    QualityGateSnapshot,
     RiskScore,
     UnassignAgentResponse,
-    VulnProcessingStatus,
-    VulnSeveritySummary,
     Vulnerability,
     VulnerabilityAcceptRiskResponse,
     VulnerabilityAssignResponse,
@@ -138,6 +187,7 @@ from .pentest import (
     VulnerabilityCommentListResponse,
     VulnerabilityCommentUpdateResponse,
     VulnerabilityEvidenceResponse,
+    VulnerabilityExportFile,
     VulnerabilityExportResponse,
     VulnerabilityFalsePositiveResponse,
     VulnerabilityHistoryItem,
@@ -151,10 +201,30 @@ from .pentest import (
     VulnerabilityStatusChangeResponse,
     VulnerabilitySummary,
     VulnerabilityUnassignResponse,
+    VulnProcessingStatus,
+    VulnSeveritySummary,
     Webhook,
     WebhookCreateResponse,
     WebhookDeleteResponse,
     WebhookListResponse,
+)
+from .policy import (
+    RemediationPolicy,
+    RemediationPolicyResponse,
+)
+from .report import (
+    IssuedReport,
+    IssuedReportDownload,
+    IssuedReportListResponse,
+    ReportProfile,
+    ReportProfileResponse,
+    ReportSettingsResponse,
+)
+from .retest import (
+    RetestRun,
+    RetestRunListResponse,
+    RetestSummary,
+    VulnerabilityReviewResponse,
 )
 from .scheduled_pentest import (
     ScheduledPentest,
@@ -203,8 +273,8 @@ from .team import (
     UsageHourlyEntry,
     UsageMemberDetailResponse,
     UsageMemberInfo,
-    UsageMemberSummary,
     UsageMembersResponse,
+    UsageMemberSummary,
     UsageModelBreakdown,
     UsageOnDemand,
     UsageSummaryResponse,
@@ -223,6 +293,15 @@ from .ticket import (
     TicketComment,
     TicketCreateResponse,
     TicketListResponse,
+)
+from .webhook import (
+    WebhookDelivery,
+    WebhookDeliveryListResponse,
+    WebhookSubscription,
+    WebhookSubscriptionCreateResponse,
+    WebhookSubscriptionListResponse,
+    WebhookSubscriptionShowResponse,
+    WebhookTestResponse,
 )
 
 __all__ = [
@@ -264,6 +343,10 @@ __all__ = [
     "ChatOperation",
     "ChatOperationListResponse",
     "AssignOperationsResponse",
+    "ChatVulnerability",
+    "ChatVulnerabilityListResponse",
+    "AssignVulnerabilitiesResponse",
+    "RemoveVulnerabilityResponse",
     "ChatShareResponse",
     "ChatUnshareResponse",
     "ChatArchiveResponse",
@@ -322,10 +405,12 @@ __all__ = [
     "PentestListResponse",
     "FinishVulnSummary",
     "PentestFinishResponse",
+    "PentestLimits",
     # Pentest quality gate
     "QualityGateFailure",
     "QualityGatePentestResult",
     "QualityGateResponse",
+    "QualityGateSnapshot",
     # Pentest assets
     "AssetListResponse",
     "AssetCreateResponse",
@@ -376,6 +461,7 @@ __all__ = [
     "VulnerabilityListResponse",
     "VulnerabilitySummary",
     "VulnerabilityExportResponse",
+    "VulnerabilityExportFile",
     "VulnerabilityQualityGateResponse",
     # Vulnerability status transitions
     "VulnerabilityResolveResponse",
@@ -460,4 +546,68 @@ __all__ = [
     "TicketAttachment",
     "TicketListResponse",
     "TicketCreateResponse",
+    # Catalogs
+    "CweEntry",
+    "CweListResponse",
+    "AttackTechnique",
+    "AttackTechniqueListResponse",
+    "ApprovalClass",
+    "ApprovalClassListResponse",
+    "CatalogFieldOption",
+    "CatalogField",
+    "ReportProfileFieldsResponse",
+    "ValidationMetricsClass",
+    "ValidationMetricsResponse",
+    # Control / RoE
+    "RoeTimeWindow",
+    "EscalationContact",
+    "EngagementRoe",
+    "RoeVersionSummary",
+    "RoeResponse",
+    "KillResponse",
+    "Approval",
+    "ApprovalListResponse",
+    # Evidence
+    "EvidenceArtifact",
+    "EvidenceArtifactListResponse",
+    "EvidenceArtifactDetail",
+    "EvidenceManifest",
+    "AuditChainResponse",
+    "AuditChainVerifyResponse",
+    "FindingProvenance",
+    "RetentionPolicy",
+    # Reports
+    "ReportProfile",
+    "ReportProfileResponse",
+    "ReportSettingsResponse",
+    "IssuedReport",
+    "IssuedReportListResponse",
+    "IssuedReportDownload",
+    # Retest
+    "RetestSummary",
+    "RetestRun",
+    "RetestRunListResponse",
+    "VulnerabilityReviewResponse",
+    # Tenant webhooks
+    "WebhookSubscription",
+    "WebhookSubscriptionListResponse",
+    "WebhookSubscriptionCreateResponse",
+    "WebhookSubscriptionShowResponse",
+    "WebhookDelivery",
+    "WebhookDeliveryListResponse",
+    "WebhookTestResponse",
+    # Integrations
+    "IntegrationProvider",
+    "IntegrationProviderListResponse",
+    "Integration",
+    "IntegrationListResponse",
+    "IntegrationCreateResponse",
+    "IntegrationShowResponse",
+    "IntegrationSyncResult",
+    "IntegrationTestResponse",
+    "IntegrationLink",
+    "IntegrationLinkListResponse",
+    # Policy
+    "RemediationPolicy",
+    "RemediationPolicyResponse",
 ]
